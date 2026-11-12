@@ -12,9 +12,14 @@ const AALT_TAGS = ['smcp', 'c2sc', 'salt', 'swsh', 'hist', 'onum', 'lnum', 'tnum
 const mentioned = (code: string, name: string) =>
   new RegExp(`(^|[\\s\\[\\\\])${name.replace(/[.]/g, '\\.')}(?=[\\s\\];])`, 'm').test(code)
 
-/** The text of every `feature tag { ... } tag;` block in the code. */
-const blockOf = (code: string, tag: string) =>
-  [...code.matchAll(new RegExp(`feature\\s+${tag}\\s*\\{([\\s\\S]*?)\\}\\s*${tag}\\s*;`, 'g'))].map(m => m[1]).join('\n')
+/** The text of every `feature tag { ... } tag;` block in the code, plus the `lookup name { ... } name;` blocks it points to:
+ *  once FontForge has compiled a font, the swaps live in named lookups and the feature only says which ones to use. */
+export const blockOf = (code: string, tag: string) => {
+  const feats = [...code.matchAll(new RegExp(`feature\\s+${tag}\\s*\\{([\\s\\S]*?)\\}\\s*${tag}\\s*;`, 'g'))].map(m => m[1]).join('\n')
+  const names = new Set([...feats.matchAll(/\blookup\s+(\w+)\s*;/g)].map(m => m[1]))
+  const bodies = [...names].map(n => [...code.matchAll(new RegExp(`lookup\\s+${n}\\s*\\{([\\s\\S]*?)\\}\\s*${n}\\s*;`, 'g'))].map(m => m[1]).join('\n'))
+  return [feats, ...bodies].join('\n')
+}
 
 const feature = (tag: string, rules: string[]) => (rules.length ? [`feature ${tag} {\n${rules.join('\n')}\n} ${tag};`] : [])
 const isSet = (t: string) => /^ss\d\d$/.test(t)

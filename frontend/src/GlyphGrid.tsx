@@ -289,7 +289,7 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
         <Tabs value={mode} onValueChange={v => setMode(v as Mode)}>
           <TabsList className="h-7 w-full">
             <TabsTrigger value="font" className="text-xs" title="Only glyphs the font has">Font</TabsTrigger>
-            <TabsTrigger value="scripts" className="text-xs" title="The slots of the OpenType scripts you pick (latn, hani, arab, hebr ...), empty ones included">Scripts</TabsTrigger>
+            <TabsTrigger value="scripts" className="text-xs" title="The slots of the languages you pick (Latin, Han, Arabic, Hebrew ...), empty ones included. Each is an OpenType script: latn, hani, arab, hebr ...">Languages</TabsTrigger>
             <TabsTrigger value="unicode" className="text-xs" title="Every Basic Multilingual Plane slot, empty ones included">Unicode</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -306,10 +306,10 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
               </span>
             ))}
             <Popover.Root>
-              <Popover.Trigger asChild><Button size="xs" variant="outline"><Plus />Script</Button></Popover.Trigger>
+              <Popover.Trigger asChild><Button size="xs" variant="outline"><Plus />Language</Button></Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content align="start" sideOffset={6} className="z-50 w-80 space-y-2 rounded-lg border bg-popover p-3 text-xs text-popover-foreground shadow-md">
-                  <p className="text-muted-foreground">Which OpenType scripts' slots to show. Any mix is fine, Latin or not: add one whenever the project grows into it. The slots are empty until you draw them.</p>
+                  <p className="text-muted-foreground">Which languages' slots to show, each named by its OpenType script. Any mix is fine, Latin or not: add one whenever the project grows into it. The slots are empty until you draw them.</p>
                   <ScriptPicker value={chosen} onChange={setChosen} locked={inFont} />
                 </Popover.Content>
               </Popover.Portal>

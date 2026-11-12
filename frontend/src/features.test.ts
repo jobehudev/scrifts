@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { generate, featureTags, languageSystems, addLanguageSystem, removeLanguageSystem } from './features.ts'
+import { generate, featureTags, languageSystems, addLanguageSystem, removeLanguageSystem, blockOf } from './features.ts'
 
 const names = ['f', 'i', 'l', 'f_i', 'f_f', 'f_f_i', 'x_y', 'f_i.alt', 'a', 'a.sc', 'b.sc', 'g', 'g.ss01', 'a.ss02']
 
@@ -75,4 +75,11 @@ test('language systems: read, add after the last one, remove, no duplicates', ()
 test('adding a script to code with none puts DFLT dflt first', () => {
   const out = addLanguageSystem('feature liga {\n  sub f i by f_i;\n} liga;\n', { script: 'hani', lang: 'dflt' })
   assert.deepEqual(languageSystems(out).map(l => l.script), ['DFLT', 'hani'])
+})
+
+test('code as FontForge writes it back (swaps in named lookups) counts as already used', () => {
+  const compiled = 'languagesystem DFLT dflt;\n\nlookup ligaLookup0 {\n  lookupflag 0;\n    sub \\f \\i  by \\f_i;\n} ligaLookup0;\n\nfeature liga {\n  script latn;\n     language dflt ;\n      lookup ligaLookup0;\n  script DFLT;\n     language dflt ;\n      lookup ligaLookup0;\n\n} liga;\n'
+  assert.match(blockOf(compiled, 'liga'), /sub \\f \\i\s+by \\f_i;/)
+  assert.equal(generate('liga', ['f', 'i', 'f_i'], compiled), '', 'nothing left to add, so no duplicate rule')
+  assert.match(generate('liga', ['f', 'i', 'l', 'f_i', 'f_l'], compiled), /sub f l by f_l;/)
 })

@@ -26,7 +26,7 @@ export function NewFontDialog({ open, onOpenChange, onCreate }: {
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>New font</DialogTitle>
-          <DialogDescription>Starts with .notdef and space. The grid's Scripts view shows the slots of the scripts you pick here; add more any time.</DialogDescription>
+          <DialogDescription>Starts with .notdef and space. The grid's Languages view shows the slots of the languages you pick here; add more any time.</DialogDescription>
         </DialogHeader>
         <form className="grid gap-3" onSubmit={e => { e.preventDefault(); if (ok) { saveScripts(family.trim(), scripts); onCreate({ family: family.trim(), style: style.trim() || 'Regular', em, quadratic }) } }}>
           <div className="grid gap-1.5">
@@ -57,9 +57,9 @@ export function NewFontDialog({ open, onOpenChange, onCreate }: {
             </Tabs>
           </div>
           <div className="grid gap-1.5">
-            <Label>Scripts</Label>
+            <Label>Languages</Label>
             <div className="max-h-36 overflow-y-auto rounded-md border p-1"><ScriptPicker value={scripts} onChange={setScripts} /></div>
-            <span className="text-xs text-muted-foreground">OpenType script tags. The default is set in Settings (Ctrl ,).</span>
+            <span className="text-xs text-muted-foreground">Each is an OpenType script. The default is set in Settings (Ctrl ,).</span>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>

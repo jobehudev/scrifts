@@ -99,7 +99,7 @@ export function SettingsDialog({ open, onOpenChange, fontName, onRefreshUiFont }
         <span className="w-10 font-mono text-xs text-muted-foreground">{s.gridCell}px</span>
       </div> },
 
-    { id: 'scripts', cat: 'general', label: 'Default Scripts', desc: 'The OpenType scripts a new font starts with in the glyph grid, Latin or not. Any font can add more later from the grid\'s Scripts view.', keywords: 'language latin han kanji arabic hebrew cyrillic greek new font glyph grid writing system',
+    { id: 'scripts', cat: 'general', label: 'Default Languages', desc: 'The languages a new font starts with in the glyph grid, Latin or not, each named by its OpenType script. Any font can add more later from the grid\'s Languages view.', keywords: 'language latin han kanji arabic hebrew cyrillic greek new font glyph grid writing system',
       body: <ScriptPicker value={s.scripts} onChange={v => setSettings({ scripts: v })} /> },
     { id: 'autosave', cat: 'general', label: 'Autosave', desc: 'Saves .sfd projects in place a few seconds after a change. Other formats are never overwritten.', keywords: 'save backup',
       body: <Choice k="autosave" options={[[true, 'On'], [false, 'Off']]} /> },

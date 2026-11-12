@@ -1,6 +1,6 @@
 import { GRID_SCRIPTS, shortName, slotCount } from './gridScripts'
 
-/** The OpenType scripts to show slots for in the glyph grid, as checkboxes: the name and the script tag the font will use for it.
+/** The languages to show slots for in the glyph grid, as checkboxes: the name and the OpenType script tag the font uses for it.
  *  `locked` ones have glyphs in the font and stay on. */
 export function ScriptPicker({ value, onChange, locked = [], cols = 2 }: {
   value: string[]; onChange: (v: string[]) => void; locked?: string[]; cols?: 1 | 2
