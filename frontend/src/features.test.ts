@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { generate, featureTags, languageSystems, addLanguageSystem, removeLanguageSystem, blockOf } from './features.ts'
+import { generate, featureTags, languageSystems, addLanguageSystem, removeLanguageSystem, blockOf, syncLanguageSystems } from './features.ts'
 
 const names = ['f', 'i', 'l', 'f_i', 'f_f', 'f_f_i', 'x_y', 'f_i.alt', 'a', 'a.sc', 'b.sc', 'g', 'g.ss01', 'a.ss02']
 
@@ -82,4 +82,37 @@ test('code as FontForge writes it back (swaps in named lookups) counts as alread
   assert.match(blockOf(compiled, 'liga'), /sub \\f \\i\s+by \\f_i;/)
   assert.equal(generate('liga', ['f', 'i', 'f_i'], compiled), '', 'nothing left to add, so no duplicate rule')
   assert.match(generate('liga', ['f', 'i', 'l', 'f_i', 'f_l'], compiled), /sub f l by f_l;/)
+})
+
+test('features are registered for every language the font has', () => {
+  const out = generate('smcp', ['a', 'a.sc'], '', ['latn', 'grek', 'arab'])
+  assert.deepEqual(languageSystems(out).map(l => l.script), ['DFLT', 'latn', 'grek', 'arab'])
+  const code = 'languagesystem DFLT dflt;\nlanguagesystem latn dflt;\n\nfeature liga {\n  sub f i by f_i;\n} liga;\n'
+  const synced = syncLanguageSystems(code, ['latn', 'grek'])
+  assert.deepEqual(languageSystems(synced).map(l => l.script), ['DFLT', 'latn', 'grek'])
+  assert.equal(syncLanguageSystems(synced, ['latn', 'grek']), synced, 'nothing to add the second time')
+})
+
+const compiled = 'languagesystem DFLT dflt;\nlanguagesystem latn dflt;\n\nlookup L0 {\n  sub \\f \\i by \\f_i;\n} L0;\n\nfeature liga {\n  script latn;\n     language dflt ;\n      lookup L0;\n  script DFLT;\n     language dflt ;\n      lookup L0;\n\n} liga;\n'
+
+test('compiled features name their scripts, so registering a language adds a section to each', () => {
+  const out = syncLanguageSystems(compiled, ['latn', 'arab'])
+  assert.match(out, /languagesystem arab dflt;/)
+  assert.match(out, /script arab;\s+language dflt ;\s+lookup L0;/)
+  assert.equal(out.match(/script latn;/g)?.length, 1, 'existing sections are left alone')
+  assert.equal(syncLanguageSystems(out, ['latn', 'arab']), out, 'nothing to add the second time')
+})
+
+test('removing a language takes its sections out of compiled features too', () => {
+  const out = removeLanguageSystem(syncLanguageSystems(compiled, ['latn', 'arab']), { script: 'arab', lang: 'dflt' })
+  assert.ok(!/arab/.test(out))
+  assert.match(out, /script latn;[\s\S]*script DFLT;/)
+  assert.match(out, /feature liga \{[\s\S]*\} liga;/)
+})
+
+test('hand-written features without script lines are left to the languagesystem lines', () => {
+  const hand = 'languagesystem DFLT dflt;\n\nfeature liga {\n  sub f i by f_i;\n} liga;\n'
+  const out = syncLanguageSystems(hand, ['latn', 'arab'])
+  assert.ok(!/script arab/.test(out))
+  assert.deepEqual(languageSystems(out).map(l => l.script), ['DFLT', 'latn', 'arab'])
 })

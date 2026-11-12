@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, X } from 'lucide-react'
-import { Popover } from 'radix-ui'
 import { api, bench, outlines, type FontInfo, type Location } from './api'
 import { theme, useCanvas, useOutlineVersion } from './canvas'
 import { getClip, setClip, type GlyphData } from './clip'
@@ -9,21 +7,24 @@ import { toast } from 'sonner'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { useCommands } from './commands'
 import { useSettings } from './settings'
-import { GRID_SCRIPTS, loadScripts, rangesFor, saveScripts, scriptsInFont, shortName, slotCount } from './gridScripts'
-import { scriptName } from './scripts'
-import { ScriptPicker } from './ScriptPicker'
+import { rangesFor, useLanguages } from './gridScripts'
+import { LanguageBar } from './LanguageBar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const LABEL = 14
 
-type Cat = 'all' | 'letters' | 'accented' | 'accents' | 'numbers' | 'punct' | 'symbols'
+type Cat = 'all' | 'letters' | 'accented' | 'accents' | 'numbers' | 'punct' | 'symbols' | 'alts'
 const CATS: [Cat, string, string][] = [
   ['all', 'All', 'Every glyph'], ['letters', 'Letters', 'Plain letters, A-Z and other alphabets'], ['accented', 'Accented', 'Letters with an accent: É, ñ, Ů'],
   ['accents', 'Accents', 'The accent marks themselves: grave, acute, tilde, combining marks'], ['numbers', 'Numbers', 'Digits and other number characters'],
   ['punct', 'Punctuation', 'Punctuation and quotes'], ['symbols', 'Symbols', 'Currency, maths and other symbols'],
+  ['alts', 'Alternates', 'Glyphs made for the Features page: ligatures (f_i), small capitals (a.sc), stylistic sets (g.ss01), figures (one.onum)'],
 ]
+/** A glyph made for a feature: named with a dot or an underscore after its first letter (a.sc, f_i), or without a character of its own. */
+const isAlternate = (g: { name: string | null; unicode: number }) =>
+  !!g.name && g.name !== '.notdef' && (/.[._]/.test(g.name) || (g.unicode < 0 && !g.name.startsWith('.')))
 function catOf(cp: number): Cat | null {
   if (cp < 0) return null
   const c = String.fromCodePoint(cp)
@@ -116,13 +117,8 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
     const m = localStorage.getItem('forge.grid')
     return m === 'latin' ? 'scripts' : m === 'font' || m === 'scripts' || m === 'unicode' ? m : 'font'  // 'latin' is what the Scripts view used to be called
   })
-  // the scripts whose slots show: the ones picked for this family, plus any the font already has glyphs in
-  const [picked, setPicked] = useState<{ family: string; tags: string[] } | null>(null)
-  const defaults = useSettings().scripts
-  const chosen = picked && picked.family === font.familyname ? picked.tags : loadScripts(font.familyname, defaults)
-  const inFont = useMemo(() => scriptsInFont(font.glyphs), [font.glyphs])
-  const active = GRID_SCRIPTS.map(s => s.tag).filter(t => chosen.includes(t) || inFont.includes(t))
-  const setChosen = (tags: string[]) => { saveScripts(font.familyname, tags); setPicked({ family: font.familyname, tags }) }
+  // the languages whose slots show: the font's list, the same one the Features page uses
+  const { active } = useLanguages(font.familyname, font.glyphs)
   const [empty, setEmpty] = useState<number | null>(null)  // selected empty slot
   const [scroll, setScroll] = useState(0)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -144,7 +140,7 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
   const all = useMemo(() => slots(font, mode, activeKey), [font, mode, activeKey])
   const [cat, setCat] = useState<Cat>(() => (localStorage.getItem('forge.gridCat') as Cat) ?? 'all')
   useEffect(() => { localStorage.setItem('forge.gridCat', cat) }, [cat])
-  const list = useMemo(() => all.filter(matcher(query, nameCp)).filter(g => cat === 'all' || catOf(g.unicode) === cat), [all, query, nameCp, cat])
+  const list = useMemo(() => all.filter(matcher(query, nameCp)).filter(g => cat === 'all' || (cat === 'alts' ? isAlternate(g) : catOf(g.unicode) === cat)), [all, query, nameCp, cat])
   const missingByName = nameCp >= 0 && !font.glyphs.some(g => g.unicode === nameCp) ? nameCp : null
   const filled = useMemo(() => list.reduce((n, s) => n + (s.name ? 1 : 0), 0), [list])
   const minCell = useSettings().gridCell
@@ -293,29 +289,7 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
             <TabsTrigger value="unicode" className="text-xs" title="Every Basic Multilingual Plane slot, empty ones included">Unicode</TabsTrigger>
           </TabsList>
         </Tabs>
-        {mode === 'scripts' && (
-          <div className="flex flex-wrap items-center gap-1">
-            {active.map(t => (
-              <span key={t} title={`${scriptName(t)} · OpenType script ${t} · ${slotCount(t).toLocaleString()} slots`}
-                className="flex items-center gap-0.5 rounded border bg-muted/40 py-0.5 pl-1.5 pr-0.5 text-[11px]">
-                {shortName(t)} <span className="font-mono text-[10px] text-muted-foreground">{t}</span>
-                {inFont.includes(t)
-                  ? <span className="px-0.5 text-muted-foreground" title="The font has glyphs in this script">•</span>
-                  : <button type="button" aria-label={`Hide ${shortName(t)}`} className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                      onClick={() => setChosen(chosen.filter(x => x !== t))}><X className="size-3" /></button>}
-              </span>
-            ))}
-            <Popover.Root>
-              <Popover.Trigger asChild><Button size="xs" variant="outline"><Plus />Language</Button></Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content align="start" sideOffset={6} className="z-50 w-80 space-y-2 rounded-lg border bg-popover p-3 text-xs text-popover-foreground shadow-md">
-                  <p className="text-muted-foreground">Which languages' slots to show, each named by its OpenType script. Any mix is fine, Latin or not: add one whenever the project grows into it. The slots are empty until you draw them.</p>
-                  <ScriptPicker value={chosen} onChange={setChosen} locked={inFont} />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-          </div>
-        )}
+        {mode === 'scripts' && <LanguageBar font={font} />}
         <div className="flex flex-wrap gap-1">
           {CATS.map(([k, label, hint]) => (
             <Button key={k} size="xs" variant={cat === k ? 'secondary' : 'ghost'} title={hint} onClick={() => setCat(k)}>{label}</Button>

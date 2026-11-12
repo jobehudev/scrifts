@@ -4,7 +4,9 @@ import { Check, ChevronRight, Plus, RotateCcw, Wand2, X } from 'lucide-react'
 import { Popover } from 'radix-ui'
 import { api, outlines, type FontInfo } from './api'
 import { theme, useCanvas, useOutlineVersion } from './canvas'
-import { addLanguageSystem, blockOf, featureTags, generate, languageSystems, ON_BY_DEFAULT, removeLanguageSystem, SUFFIX_FEATURES, type Generator } from './features'
+import { addLanguageSystem, blockOf, featureTags, generate, languageSystems, ON_BY_DEFAULT, removeLanguageSystem, SUFFIX_FEATURES, syncLanguageSystems, type Generator } from './features'
+import { BLOCKS, shortName, useLanguages } from './gridScripts'
+import { LanguageBar } from './LanguageBar'
 import { LANGUAGES, SCRIPTS, scriptName, scriptOf } from './scripts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,33 +25,39 @@ const ALT_DEFAULT: Record<string, string> = { onum: '0123456789', lnum: '0123456
 
 /** The kinds of swap a font can do, in plain words. Each one is set up from glyphs named in a convention. */
 type Kind = {
-  id: Exclude<Generator, 'all' | 'aalt'>; title: string; what: string; draw: string; sample: string
-  tags: (code: string) => string[]   // the OpenType feature tags of this kind that the code defines
+  id: 'liga' | 'smcp' | 'ss' | 'alt'
+  ids: Exclude<Generator, 'all' | 'aalt'>[]   // the generators behind it (small capitals is two OpenType features)
+  title: string; what: string; draw: string; sample: string
+  tags: (code: string) => string[]            // the OpenType feature tags of this kind that the code defines
+  glyphs: (names: string[]) => string[]       // the glyphs of this kind the font has
 }
 const KINDS: Kind[] = [
-  { id: 'liga', title: 'Ligatures', what: 'Letters that join into one shape when typed together: f then i becomes a single fi.',
-    draw: 'Draw a glyph named f_i (or f_f_i, f_l ...) and the font will use it whenever those letters meet.', sample: 'office fifty fluffy', tags: c => featureTags(c).filter(t => t === 'liga') },
-  { id: 'smcp', title: 'Small capitals', what: 'Lowercase letters shown as small capital shapes.',
-    draw: 'Draw a.sc, b.sc, c.sc ... one for each letter.', sample: 'Small Capitals', tags: c => featureTags(c).filter(t => t === 'smcp') },
-  { id: 'c2sc', title: 'Capitals to small capitals', what: 'The same small capitals, for people who type in capitals.',
-    draw: 'Uses the same a.sc, b.sc ... glyphs as above.', sample: 'ALL SMALL CAPS', tags: c => featureTags(c).filter(t => t === 'c2sc') },
-  { id: 'ss', title: 'Stylistic sets', what: 'Alternate letter shapes that people switch on in groups, like a different g or a single-storey a.',
-    draw: 'Draw g.ss01, a.ss01, y.ss02 ... the number says which set.', sample: 'Quick gray fox', tags: c => featureTags(c).filter(t => /^ss\d\d$/.test(t)) },
-  { id: 'alt', title: 'Figures and other alternates', what: 'Old-style or tabular numbers, swashes, case-sensitive punctuation, superscripts and more.',
-    draw: 'Draw one.onum (old-style), one.tnum (tabular), a.swsh (swash), a.salt (alternate) ...', sample: '0123456789 (A-B)', tags: c => SUFFIX_FEATURES.filter(t => featureTags(c).includes(t)) },
+  { id: 'liga', ids: ['liga'], title: 'Ligatures', what: 'Letters that join into one shape when typed together: f then i becomes a single fi.',
+    draw: 'Draw a glyph named f_i (or f_f_i, f_l ...) and the font will use it whenever those letters meet.', sample: 'office fifty fluffy',
+    tags: c => featureTags(c).filter(t => t === 'liga'), glyphs: ns => ns.filter(n => /^[A-Za-z]+(_[A-Za-z]+)+$/.test(n)) },
+  { id: 'smcp', ids: ['smcp', 'c2sc'], title: 'Small capitals', what: 'Lowercase letters shown as small capital shapes. Capitals can become small capitals too, for text typed in capitals.',
+    draw: 'Draw a.sc, b.sc, c.sc ... one for each letter.', sample: 'Small Capitals NASA',
+    tags: c => featureTags(c).filter(t => t === 'smcp' || t === 'c2sc'), glyphs: ns => ns.filter(n => n.endsWith('.sc')) },
+  { id: 'ss', ids: ['ss'], title: 'Stylistic sets', what: 'Alternate letter shapes that people switch on in groups, like a different g or a single-storey a.',
+    draw: 'Draw g.ss01, a.ss01, y.ss02 ... the number says which set.', sample: 'Quick gray fox',
+    tags: c => featureTags(c).filter(t => /^ss\d\d$/.test(t)), glyphs: ns => ns.filter(n => /\.ss\d\d$/.test(n)) },
+  { id: 'alt', ids: ['alt'], title: 'Figures and other alternates', what: 'Old-style or tabular numbers, swashes, case-sensitive punctuation, superscripts and more.',
+    draw: 'Draw one.onum (old-style), one.tnum (tabular), a.swsh (swash), a.salt (alternate) ...', sample: '0123456789 (A-B)',
+    tags: c => SUFFIX_FEATURES.filter(t => featureTags(c).includes(t)), glyphs: ns => ns.filter(n => SUFFIX_FEATURES.includes(n.split('.').pop() ?? '') && n.includes('.')) },
 ]
 
 const subs = (text: string) => (text.match(/^\s*sub\s/gm) ?? []).length
 /** How many swaps the code has under these feature tags. */
 const swapsIn = (code: string, tags: string[]) => tags.reduce((n, t) => n + subs(blockOf(code, t)), 0)
+const SHOWN = 14
 
 /**
  * What a font can do while someone types: swap glyphs (ligatures, small capitals, alternates). Each kind is a row:
- * what it is, whether the font has it, and one click to set it up from glyphs named the usual way. The code that
- * makes it work (OpenType feature code, compiled by FontForge) and the scripts and languages it applies to are
- * under Advanced. The preview shapes with HarfBuzz using the font as applied.
+ * what it is, the glyphs the font has for it (click one to open it), and one click to make or set them up.
+ * The font's languages are the same list the glyph grid uses, and setting a row up registers its swaps for all of them.
+ * The code behind it (OpenType feature code, compiled by FontForge) is under Advanced. The preview shapes with HarfBuzz.
  */
-export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: () => void }) {
+export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo; onChanged: () => void; onOpenGlyph: (name: string) => void }) {
   const [data, setData] = useState<Features | null>(null)
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +69,7 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
   const [testScript, setTestScript] = useState<string>('auto')  // the script the preview text is shaped as; 'auto' lets HarfBuzz guess
   const [newScript, setNewScript] = useState('arab')
   const [newLang, setNewLang] = useState('dflt')
+  const { chosen, active, setChosen } = useLanguages(font.familyname, font.glyphs)
 
   useEffect(() => {
     api<Features>('/api/features').then(d => { setData(d); setCode(d.code) })
@@ -95,15 +104,24 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
 
   const names = font.glyphs.map(g => g.name)
   const withAdded = (base: string, add: string) => (add.startsWith('languagesystem') ? add + '\n\n' + base : base.trimEnd() + '\n\n' + add + '\n')
+  /** The feature code for the glyphs of this kind that the code does not use yet. */
+  const addFor = (k: Kind) => {
+    let acc = ''
+    for (const id of k.ids) {
+      const a = generate(id, names, code + '\n' + acc, active)
+      if (a) acc += (acc ? '\n\n' : '') + a
+    }
+    return acc
+  }
   const gen = (k: Generator) => {
-    const add = generate(k, names, code)
+    const add = generate(k, names, code, active)
     if (!add) { toast.info('Nothing to add', { description: 'No glyph names that match, or the code already uses them.' }); return }
     setCode(c => withAdded(c, add))
   }
-  /** One click: add the swaps for this kind from the glyph names, and compile. */
+  /** One click: add the swaps for this kind from the glyph names, register them for all the font's languages, and compile. */
   const setUp = (k: Kind) => {
-    const add = generate(k.id, names, code)
-    if (add) void applyCode(withAdded(code, add), `${k.title} set up`)
+    const add = addFor(k)
+    if (add) void applyCode(syncLanguageSystems(withAdded(code, add), active), `${k.title} set up`)
   }
   const tryIt = (k: Kind, on: string[]) => {
     setText(k.sample)
@@ -152,6 +170,9 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
   const dirty = data !== null && code !== data.code
   const systems = languageSystems(code)
   const rtl = !!scriptOf(testScript)?.rtl
+  // languages the font has that its compiled features are not registered for
+  const registered = languageSystems(data?.code ?? '')
+  const unregistered = data && data.lookups.length > 0 ? active.filter(t => !registered.some(r => r.script.toLowerCase() === t.toLowerCase())) : []
 
   useOutlineVersion()
   const ref = useCanvas((ctx, w, h) => {
@@ -183,6 +204,18 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
           </p>
         </div>
 
+        {/* the same list as the glyph grid's Languages view */}
+        <div className="space-y-1.5 border-b px-4 py-2.5">
+          <LanguageBar font={font} label="Languages" />
+          <p className="text-[11px] text-muted-foreground">The swaps below are registered for these languages. The glyph grid uses the same list.</p>
+          {unregistered.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-2 py-1.5 text-xs">
+              <span>Your features are not registered for {unregistered.map(shortName).join(', ')} yet.</span>
+              <Button size="xs" disabled={busy} onClick={() => void applyCode(syncLanguageSystems(code, active), 'Features registered for every language')}>Register them</Button>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-2 p-4">
           {error && (
             <pre className="max-h-32 overflow-auto rounded-md border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs whitespace-pre-wrap text-destructive">
@@ -191,9 +224,10 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
           )}
           {KINDS.map(k => {
             const have = k.tags(data?.code ?? '')
-            const add = data ? generate(k.id, names, code) : ''
+            const add = data ? addFor(k) : ''
             const more = subs(add)
-            const n = swapsIn(data?.code ?? '', have)
+            const n = swapsIn(data?.code ?? '', have.filter(t => t !== 'c2sc'))
+            const glyphs = k.glyphs(names)
             return (
               <div key={k.id} className="flex items-start gap-3 rounded-lg border p-3">
                 <div className="min-w-0 flex-1">
@@ -202,11 +236,21 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
                     {have.length > 0
                       ? <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px]">In your font · {n} swap{n === 1 ? '' : 's'}</span>
                       : more > 0
-                        ? <span className="rounded-full bg-accent px-2 py-0.5 text-[11px]">{more} swap{more === 1 ? '' : 's'} found in your glyph names</span>
+                        ? <span className="rounded-full bg-accent px-2 py-0.5 text-[11px]">{more} swap{more === 1 ? '' : 's'} ready</span>
                         : <span className="text-[11px] text-muted-foreground">Not yet</span>}
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">{k.what}</p>
-                  {have.length === 0 && more === 0 && <p className="mt-1 text-xs"><span className="text-muted-foreground">To start: </span>{k.draw}</p>}
+                  {glyphs.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <span className="text-[11px] text-muted-foreground">Your glyphs:</span>
+                      {glyphs.slice(0, SHOWN).map(g => (
+                        <button key={g} type="button" title={`Open ${g} in the glyph editor`} onClick={() => onOpenGlyph(g)}
+                          className="rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] hover:bg-accent">{g}</button>
+                      ))}
+                      {glyphs.length > SHOWN && <span className="text-[11px] text-muted-foreground">+{glyphs.length - SHOWN} more, under Alternates in the glyph grid</span>}
+                    </div>
+                  )}
+                  {glyphs.length === 0 && more === 0 && <p className="mt-1 text-xs"><span className="text-muted-foreground">To start: </span>{k.draw}</p>}
                   {/* the glyphs this kind needs, made for you so there is something to draw */}
                   {more === 0 && (k.id === 'ss' || k.id === 'alt') && (() => {
                     const f = forms[k.id]
@@ -246,7 +290,7 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
                   )}
                   {more > 0 && (
                     <Button size="xs" variant={have.length ? 'outline' : 'default'} disabled={busy} onClick={() => setUp(k)}
-                      title="Adds these swaps to the font and compiles it">
+                      title="Adds these swaps to the font, for all its languages, and compiles it">
                       <Wand2 />{have.length ? `Add ${more} more` : 'Set it up'}
                     </Button>
                   )}
@@ -254,21 +298,23 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
               </div>
             )
           })}
-          <p className="text-xs text-muted-foreground">Kerning (space between letter pairs) is in Spacing, and where accents sit is in Accents.</p>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <p>Every glyph made for a swap is in the glyph grid under <span className="text-foreground">Alternates</span>. To see them in text, use Spacing's <span className="text-foreground">Features</span> button, or type <code>/</code> and a glyph name there (for example <code>/f_i</code>).</p>
+            <p>Kerning (space between letter pairs) is in Spacing, and where accents sit is in Accents.</p>
+          </div>
         </div>
 
         <details className="border-t px-4 py-2 text-xs">
           <summary className="flex cursor-pointer select-none items-center gap-1 font-medium">
-            <ChevronRight className="size-3.5 transition-transform [details[open]_&]:rotate-90" />Advanced: feature code, scripts and languages
+            <ChevronRight className="size-3.5 transition-transform [details[open]_&]:rotate-90" />Advanced: feature code and exact script and language tags
           </summary>
           <div className="mt-3 space-y-3">
             <p className="max-w-3xl leading-relaxed text-muted-foreground">
               Everything above is written as OpenType feature code, which you can edit directly for anything the rows don't cover. Each feature is
-              registered for the scripts and languages listed under Language systems (<code>DFLT{'{'}dflt{'}'}</code> means any script,
-              <code> arab{'{'}dflt{'}'}</code> Arabic, <code>latn{'{'}TRK{'}'}</code> Latin as written in Turkish).
+              registered for the language systems below (<code>DFLT{'{'}dflt{'}'}</code> any script, <code>arab{'{'}dflt{'}'}</code> Arabic,
+              <code> latn{'{'}TRK{'}'}</code> Latin as written in Turkish). Adding a script here also adds it to the font's languages above.
             </p>
 
-            {/* the scripts and languages the features are registered under: DFLT{dflt}, latn{dflt}, arab{dflt}, latn{TRK} ... */}
             <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5">
               <span className="font-medium" title="Every feature is registered for each script and language listed here. Apply to make it part of the font.">Language systems</span>
               {systems.map(sys => (
@@ -283,7 +329,7 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
                 <Popover.Trigger asChild><Button size="xs" variant="outline"><Plus />Add</Button></Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content align="start" sideOffset={6} className="z-50 w-80 space-y-2 rounded-lg border bg-popover p-3 text-xs text-popover-foreground shadow-md">
-                    <p className="text-muted-foreground">A font says which scripts and languages its features are for. Add one, then Apply: the features you have are registered under it too.</p>
+                    <p className="text-muted-foreground">Add one, then Apply: the features you have are registered under it too.</p>
                     <label className="flex items-center gap-2"><span className="w-14 shrink-0">Script</span>
                       <Select value={newScript} onChange={e => setNewScript(e.target.value)} className="h-7">
                         {SCRIPTS.map(sc => <option key={sc.tag} value={sc.tag}>{sc.tag} · {sc.name}</option>)}
@@ -294,13 +340,16 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
                     <div className="flex items-center gap-2">
                       <span className="flex-1 font-mono text-muted-foreground">{newScript}{'{'}{newLang || 'dflt'}{'}'}</span>
                       <Popover.Close asChild>
-                        <Button size="xs" disabled={!/^\w{3,4}$/.test(newLang || 'dflt')} onClick={() => setCode(c => addLanguageSystem(c, { script: newScript, lang: newLang || 'dflt' }))}>Add</Button>
+                        <Button size="xs" disabled={!/^\w{3,4}$/.test(newLang || 'dflt')} onClick={() => {
+                          setCode(c => addLanguageSystem(c, { script: newScript, lang: newLang || 'dflt' }))
+                          if (BLOCKS[newScript] && !active.includes(newScript)) setChosen([...chosen, newScript])  // the font's languages follow
+                        }}>Add</Button>
                       </Popover.Close>
                     </div>
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
-              {!systems.length && <span className="text-muted-foreground">None declared yet: setting up a row adds DFLT{'{'}dflt{'}'} and latn{'{'}dflt{'}'}.</span>}
+              {!systems.length && <span className="text-muted-foreground">None declared yet: setting up a row adds one for each of the font's languages.</span>}
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">

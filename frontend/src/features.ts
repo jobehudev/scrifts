@@ -68,7 +68,7 @@ function blocksFor(kind: Exclude<Generator, 'all'>, names: string[], code: strin
 }
 
 /** Feature code for glyphs the code doesn't use yet; '' when there is nothing to add. */
-export function generate(kind: Generator, names: string[], code: string): string {
+export function generate(kind: Generator, names: string[], code: string, scripts: string[] = ['latn']): string {
   const blocks: string[] = []
   let seen = code
   for (const k of kind === 'all' ? (['liga', 'smcp', 'c2sc', 'ss', 'alt', 'aalt'] as const) : [kind]) {
@@ -77,7 +77,7 @@ export function generate(kind: Generator, names: string[], code: string): string
     seen += '\n\n' + b.join('\n\n')  // later generators (aalt) see what the earlier ones added
   }
   if (!blocks.length) return ''
-  const header = /^\s*languagesystem\b/m.test(code) ? '' : 'languagesystem DFLT dflt;\nlanguagesystem latn dflt;\n\n'
+  const header = /^\s*languagesystem\b/m.test(code) ? '' : `languagesystem DFLT dflt;\n${(scripts.length ? scripts : ['latn']).filter(t => t !== 'DFLT').map(t => `languagesystem ${t} dflt;\n`).join('')}\n`
   return header + blocks.join('\n\n')
 }
 
@@ -112,11 +112,46 @@ export function addLanguageSystem(code: string, sys: LangSys): string {
 }
 
 export function removeLanguageSystem(code: string, sys: LangSys): string {
-  return code
+  const kept = code
     .split('\n')
     .filter(l => {
       const m = /^[ \t]*languagesystem[ \t]+(\w+)[ \t]+(\w+)[ \t]*;/.exec(l)
       return !(m && same({ script: m[1], lang: m[2] }, sys))
     })
     .join('\n')
+  // no language of that script left: its sections in compiled features go too (DFLT stays, it is every script)
+  return sys.script !== 'DFLT' && !languageSystems(kept).some(l => l.script.toLowerCase() === sys.script.toLowerCase())
+    ? dropScriptSections(kept, sys.script) : kept
 }
+
+const FEATURE_BLOCK = /(feature\s+(\w{4})\s*\{)([\s\S]*?)(\}\s*\2\s*;)/g
+const SCRIPT_LINE = /^[ \t]*script[ \t]+(\w+)[ \t]*;/gm
+
+/**
+ * Features as FontForge writes them back name their scripts one by one (`script latn; language dflt; lookup x;`), so a new
+ * `languagesystem` line alone reaches none of them. Give every such feature a section for each of these scripts it lacks, using
+ * the lookups it already has. Features written without `script` lines follow the `languagesystem` lines and need nothing.
+ */
+const addScriptSections = (code: string, scripts: string[]) =>
+  code.replace(FEATURE_BLOCK, (all, open: string, _tag: string, body: string, close: string) => {
+    const have = [...body.matchAll(SCRIPT_LINE)].map(m => m[1].toLowerCase())
+    if (!have.length) return all
+    const lookups = [...new Set([...body.matchAll(/\blookup\s+(\w+)\s*;/g)].map(m => m[1]))]
+    const add = scripts.filter(t => !have.includes(t.toLowerCase()))
+      .map(t => `  script ${t};\n     language dflt ;\n${lookups.map(l => `      lookup ${l};`).join('\n')}\n`).join('')
+    return add ? open + body.replace(/\s*$/, '\n') + add + '\n' + close : all
+  })
+
+/** The code with a `languagesystem x dflt;` for each of these scripts that it lacks, and every compiled feature reaching them too. */
+export const syncLanguageSystems = (code: string, scripts: string[]) =>
+  addScriptSections(
+    scripts.reduce((c, t) => (languageSystems(c).some(l => l.script.toLowerCase() === t.toLowerCase()) ? c : addLanguageSystem(c, { script: t, lang: 'dflt' })), code),
+    scripts)
+
+/** Take a script's sections out of the compiled features (when no language of that script is declared any more). */
+const dropScriptSections = (code: string, script: string) =>
+  code.replace(FEATURE_BLOCK, (all, open: string, _tag: string, body: string, close: string) => {
+    const re = new RegExp(`^[ \\t]*script[ \\t]+${script}[ \\t]*;[\\s\\S]*?(?=^[ \\t]*script[ \\t]+\\w+[ \\t]*;|$(?![\\s\\S]))`, 'gmi')
+    const next = body.replace(re, '')
+    return next === body ? all : open + next + close
+  })

@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react'
+import { getSettings } from './settings'
 import { SCRIPTS, scriptName } from './scripts'
 
 /** The characters an OpenType script's slots cover in the glyph grid (Basic Multilingual Plane, as the grid is). Keyed by script tag. */
@@ -51,4 +53,21 @@ export function loadScripts(family: string, fallback: string[]): string[] {
   } catch { /* fall through */ }
   return fallback
 }
-export const saveScripts = (family: string, tags: string[]) => localStorage.setItem(key(family), JSON.stringify(tags))
+
+// The list is shared: the glyph grid and the Features page both read it, so a language added in one is there in the other.
+const subs = new Set<() => void>()
+let rev = 0
+export function saveScripts(family: string, tags: string[]) {
+  localStorage.setItem(key(family), JSON.stringify(tags))
+  rev++
+  subs.forEach(f => f())
+}
+
+/** The font's languages: the ones picked for this family, plus any the font already has glyphs in. Same answer wherever it is asked. */
+export function useLanguages(family: string, glyphs: { unicode: number }[]) {
+  useSyncExternalStore(f => { subs.add(f); return () => { subs.delete(f) } }, () => rev)
+  const chosen = loadScripts(family, getSettings().scripts)
+  const inFont = scriptsInFont(glyphs)
+  const active = GRID_SCRIPTS.map(s => s.tag).filter(t => chosen.includes(t) || inFont.includes(t))
+  return { chosen, inFont, active, setChosen: (tags: string[]) => saveScripts(family, tags) }
+}

@@ -240,6 +240,8 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const [shaped, setShaped] = useState<Map<string, string[]>>(() => new Map())
   const glyphNames = useMemo(() => new Set(font.glyphs.map(g => g.name)), [font])
   const chunks = useMemo(() => (featOn ? [...new Set(literalChunks(text, glyphNames))] : []), [featOn, text, glyphNames])
+  // glyphs made for features, or with no character of their own: placed in the text by name
+  const altGlyphs = useMemo(() => font.glyphs.map(g => g.name).filter(n => n !== '.notdef' && !n.startsWith('.') && /.[._]/.test(n)).slice(0, 200), [font])
   const featOnFor = (t: string) => featChoice[t] ?? ON_BY_DEFAULT.has(t)
   const featKey = featTags.map(t => t + (featOnFor(t) ? 1 : 0)).join()
   useEffect(() => {
@@ -717,9 +719,9 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
       <div className="flex items-center gap-2 overflow-x-auto border-b p-2">
         {para
           ? <Textarea value={text} onChange={e => setText(e.target.value)} rows={2} spellCheck={false} className="h-14 max-h-14 min-h-0 min-w-48 flex-1 resize-none overflow-y-auto py-1 font-mono leading-normal"
-              placeholder="Type a paragraph, or /glyphname" />
+              placeholder="Type a paragraph, or /glyphname to place any glyph (/f_i)" />
           : <Input value={text} onChange={e => setText(e.target.value)} className="h-7 min-w-48 flex-1 font-mono"
-              placeholder="Type text, or /glyphname" />}
+              placeholder="Type text, or /glyphname to place any glyph (/f_i)" />}
         <span className="shrink-0 text-xs text-muted-foreground">{waterfall ? 'waterfall' : `${size}px`}</span>
         <Slider className="w-28" min={8} max={480} step={1} value={[size]} disabled={waterfall} onValueChange={v => setSize(v[0])} />
         <Button size="xs" variant={kernOn ? 'secondary' : 'ghost'} aria-pressed={kernOn}
@@ -820,6 +822,20 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
                 ))}
               </div>
             ))}
+        </Pop>
+        <Pop label="Glyphs" active={false} width="w-80">
+          <p className="text-muted-foreground">Glyphs without a letter of their own (ligatures, small capitals, alternates) are placed by name: type <code>/</code> and the name, like <code>/f_i</code>. Click one to add it to the text.</p>
+          {altGlyphs.length === 0
+            ? <p>None yet. Make them on the Features tab.</p>
+            : (
+              <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto pt-1">
+                {altGlyphs.map(n => (
+                  <button key={n} type="button" title={`Add /${n} to the text`}
+                    onClick={() => setText(t => `${t}${t && !/[\s]$/.test(t) ? ' ' : ''}/${n} `)}
+                    className="rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] hover:bg-accent">{n}</button>
+                ))}
+              </div>
+            )}
         </Pop>
         <Pop label="Auto-space" active={false} width="w-64" strong>
           <p className="text-muted-foreground">FontForge spaces the letters evenly from their shapes. A good first pass: fine-tune by hand after.</p>
