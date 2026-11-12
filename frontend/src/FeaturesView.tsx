@@ -16,8 +16,10 @@ import { CodeEditor } from './CodeEditor'
 type Features = { code: string; lookups: { name: string; type: string; features: string[] }[]; gpos_features: string[] }
 type Shaped = { name: string; cluster: number; ax: number; dx: number; dy: number }[]
 type NewGlyph = { name: string; base?: string; scale?: number; width?: number }
-const ALT_SUFFIXES = ['ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'salt', 'swsh', 'onum', 'lnum', 'tnum', 'pnum', 'case', 'zero', 'sups', 'sinf', 'subs', 'hist', 'titl']
-const ALT_DEFAULT: Record<string, string> = { onum: '0123456789', lnum: '0123456789', tnum: '0123456789', pnum: '0123456789', sups: '0123456789', sinf: '0123456789', subs: '0123456789', zero: '0', case: '()[]{}-' }
+const SS_SUFFIXES = ['ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09', 'ss10']
+const ALT_SUFFIXES = ['onum', 'lnum', 'tnum', 'pnum', 'zero', 'case', 'sups', 'sinf', 'subs', 'salt', 'swsh', 'hist', 'titl']
+/** What each kind of alternate is usually made for, so the box starts with something sensible. */
+const ALT_DEFAULT: Record<string, string> = { onum: '0123456789', lnum: '0123456789', tnum: '0123456789', pnum: '0123456789', sups: '0123456789', sinf: '0123456789', subs: '0123456789', zero: '0', case: '()[]{}-', salt: 'a', swsh: 'A', hist: 's', titl: 'A' }
 
 /** The kinds of swap a font can do, in plain words. Each one is set up from glyphs named in a convention. */
 type Kind = {
@@ -121,12 +123,19 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
     const lower = nameOf(c), upper = nameOf(c.toUpperCase())
     return lower && upper && !haveName.has(`${lower}.sc`) ? [{ name: `${lower}.sc`, base: upper, scale: 0.8 }] : []
   })
-  const [altLetters, setAltLetters] = useState('a g y')
-  const [altSuffix, setAltSuffix] = useState('ss01')
-  const altItems: NewGlyph[] = [...altLetters.replace(/\s+/g, '')].flatMap(c => {
+  // stylistic sets and the other alternates each have their own box: letters to copy, and what to call the copies
+  const [ssLetters, setSsLetters] = useState('a g y')
+  const [ssSuffix, setSsSuffix] = useState('ss01')
+  const [altLetters, setAltLetters] = useState(ALT_DEFAULT.onum)
+  const [altSuffix, setAltSuffix] = useState('onum')
+  const copiesOf = (letters: string, suffix: string): NewGlyph[] => [...letters.replace(/\s+/g, '')].flatMap(c => {
     const base = nameOf(c)
-    return base && !haveName.has(`${base}.${altSuffix}`) ? [{ name: `${base}.${altSuffix}`, base }] : []
+    return base && !haveName.has(`${base}.${suffix}`) ? [{ name: `${base}.${suffix}`, base }] : []
   })
+  const forms = {
+    ss: { letters: ssLetters, setLetters: setSsLetters, suffix: ssSuffix, setSuffix: (v: string) => setSsSuffix(v), options: SS_SUFFIXES, items: copiesOf(ssLetters, ssSuffix) },
+    alt: { letters: altLetters, setLetters: setAltLetters, suffix: altSuffix, setSuffix: (v: string) => { setAltSuffix(v); if (ALT_DEFAULT[v]) setAltLetters(ALT_DEFAULT[v]) }, options: ALT_SUFFIXES, items: copiesOf(altLetters, altSuffix) },
+  }
   /** Make glyphs to draw. They are copies or empty slots: then the row finds them and offers Set it up. */
   const make = async (items: NewGlyph[], what: string) => {
     if (!items.length) return
@@ -199,20 +208,23 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
                   <p className="mt-0.5 text-xs text-muted-foreground">{k.what}</p>
                   {have.length === 0 && more === 0 && <p className="mt-1 text-xs"><span className="text-muted-foreground">To start: </span>{k.draw}</p>}
                   {/* the glyphs this kind needs, made for you so there is something to draw */}
-                  {more === 0 && (k.id === 'ss' || k.id === 'alt') && (
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                      <span className="text-muted-foreground">Make copies to redraw of</span>
-                      <Input value={altLetters} onChange={e => setAltLetters(e.target.value)} className="h-7 w-32 font-mono" aria-label="Letters to make alternates of" />
-                      <span className="text-muted-foreground">as</span>
-                      <Select value={altSuffix} onChange={e => { setAltSuffix(e.target.value); if (ALT_DEFAULT[e.target.value]) setAltLetters(ALT_DEFAULT[e.target.value]) }} className="h-7 w-24 font-mono" aria-label="Alternate kind">
-                        {ALT_SUFFIXES.map(sx => <option key={sx}>{sx}</option>)}
-                      </Select>
-                      <Button size="xs" variant="outline" disabled={busy || !altItems.length} onClick={() => make(altItems, 'Redraw them, then come back and press Set it up.')}
-                        title={altItems.map(i => i.name).join(', ') || 'Nothing to make: the letters are not in the font, or the copies exist'}>
-                        <Plus />Make {altItems.length || ''}
-                      </Button>
-                    </div>
-                  )}
+                  {more === 0 && (k.id === 'ss' || k.id === 'alt') && (() => {
+                    const f = forms[k.id]
+                    return (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                        <span className="text-muted-foreground">Make copies to redraw of</span>
+                        <Input value={f.letters} onChange={e => f.setLetters(e.target.value)} className="h-7 w-36 font-mono" aria-label={`Letters to make ${k.title} copies of`} />
+                        <span className="text-muted-foreground">named</span>
+                        <Select value={f.suffix} onChange={e => f.setSuffix(e.target.value)} className="h-7 w-24 font-mono" aria-label={`${k.title} kind`}>
+                          {f.options.map(sx => <option key={sx}>{sx}</option>)}
+                        </Select>
+                        <Button size="xs" variant="outline" disabled={busy || !f.items.length} onClick={() => make(f.items, 'Redraw them, then come back and press Set it up.')}
+                          title={f.items.map(i => i.name).join(', ') || 'Nothing to make: the letters are not in the font, or the copies exist'}>
+                          <Plus />Make {f.items.length || ''}
+                        </Button>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {have.length > 0 && (
