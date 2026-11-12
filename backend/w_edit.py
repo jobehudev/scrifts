@@ -559,18 +559,37 @@ def op_create_glyph(unicode=-1, name=None):
     return _glyph_summary(g)
 
 
+def _fill_parts(g, parts):
+    """The letters side by side as outlines of their own, not linked to the originals: a ligature to start from, which can be moved
+    closer together and joined into one shape. As wide as the letters are together."""
+    x = 0
+    for p in parts:
+        g.addReference(p, psMat.translate(x, 0))
+        x += state.FONT[p].width
+    g.unlinkRef()
+    g.width = x
+
+
 def op_make_glyphs(items):
-    """New glyphs to draw, for the Features page. Each item is {name, base?, scale?, width?}: with a base it starts as a
-    copy of that glyph (scaled, e.g. a.sc from A at 0.8), otherwise empty at the given width. Names the font has are left alone."""
+    """New glyphs to draw, for the Features page. Each item is {name, base?, scale?, width?, parts?, fill?}: with parts it starts as
+    those letters side by side as loose outlines (a ligature), with a base as a copy of that glyph (scaled, e.g. a.sc from A at 0.8), otherwise
+    empty at the given width. Names the font has are left alone, except an empty one when `fill` is set: that gets the letters."""
     font = state.FONT
     have = {g.glyphname for g in font.glyphs()}
     made = []
     for it in items:
-        name, base = it["name"], it.get("base")
+        name, base, parts = it["name"], it.get("base"), it.get("parts")
+        usable = bool(parts) and all(p in have for p in parts)
         if name in have:
+            g = font[name]
+            if it.get("fill") and usable and not len(g.foreground) and not g.references:
+                _fill_parts(g, parts)
+                made.append(name)
             continue
         g = font.createChar(-1, name)
-        if base and base in have:
+        if usable:
+            _fill_parts(g, parts)
+        elif base and base in have:
             s = float(it.get("scale", 1))
             g.addReference(base, psMat.scale(s))
             g.unlinkRef()  # a copy to reshape, not a link to the original

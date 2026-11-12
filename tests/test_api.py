@@ -2065,3 +2065,21 @@ def test_outlines_at_a_weight_include_glyphs_the_variable_font_lacks(client):
     finally:
         server.variables.pop(fid, None)
     assert [o["name"] for o in got] == ["f_i_loop"] and got[0]["width"] == 640
+
+
+@pytest.mark.skipif(not SFD.exists(), reason="run tests/fetch_fixtures.sh")
+def test_ligature_glyphs_start_as_their_letters(client):
+    """A ligature made for the Features page starts as its letters side by side, as outlines of their own (not linked), not an empty
+    glyph the font would swap in; an empty one can be filled."""
+    fid = client.post("/api/open", json={"path": str(SFD)}).json()["fid"]
+    x = client.get("/api/glyph/x", params={"fid": fid}).json()
+    made = client.post("/api/make-glyphs", json={"fid": fid, "items": [{"name": "x_x_test", "parts": ["x", "x"]}]}).json()
+    assert made["created"] == ["x_x_test"]
+    lig = client.get("/api/glyph/x_x_test", params={"fid": fid}).json()
+    assert len(lig["contours"]) == 2 * len(x["contours"]) and lig["refs_list"] == [] and lig["width"] == 2 * x["width"]
+    client.post("/api/make-glyphs", json={"fid": fid, "items": [{"name": "x_empty_test", "width": 500}]})
+    fill = {"name": "x_empty_test", "parts": ["x"], "fill": True}
+    assert client.post("/api/make-glyphs", json={"fid": fid, "items": [fill]}).json()["created"] == ["x_empty_test"]
+    filled = client.get("/api/glyph/x_empty_test", params={"fid": fid}).json()
+    assert filled["contours"] and filled["refs_list"] == []
+    assert client.post("/api/make-glyphs", json={"fid": fid, "items": [fill]}).json()["created"] == [], "a drawn glyph is never overwritten"

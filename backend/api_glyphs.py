@@ -361,6 +361,8 @@ class NewGlyph(BaseModel):
     base: str | None = None     # start as a copy of this glyph
     scale: float = 1.0          # ... scaled by this (small capitals: 0.8)
     width: int | None = None    # otherwise empty, this wide
+    parts: list[str] | None = None  # a ligature: start as these glyphs side by side
+    fill: bool = False          # an empty glyph of this name gets the parts too
 
 
 class MakeGlyphsReq(FontReq):

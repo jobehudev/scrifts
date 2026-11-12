@@ -17,7 +17,7 @@ import { CodeEditor } from './CodeEditor'
 
 type Features = { code: string; lookups: { name: string; type: string; features: string[] }[]; gpos_features: string[] }
 type Shaped = { name: string; cluster: number; ax: number; dx: number; dy: number }[]
-type NewGlyph = { name: string; base?: string; scale?: number; width?: number }
+type NewGlyph = { name: string; base?: string; scale?: number; width?: number; parts?: string[]; fill?: boolean }
 const SS_SUFFIXES = ['ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09', 'ss10']
 const ALT_SUFFIXES = ['onum', 'lnum', 'tnum', 'pnum', 'zero', 'case', 'sups', 'sinf', 'subs', 'salt', 'swsh', 'hist', 'titl']
 /** What each kind of alternate is usually made for, so the box starts with something sensible. */
@@ -83,7 +83,7 @@ function Sample({ font, shaped, label }: { font: FontInfo; shaped: Shaped | null
  * A picture of what the swap does: the same text without it and with it. Once the font has the feature it is drawn with the font's
  * own glyphs (shaped with the feature off, then on); before that, a generic example, so the idea comes across with nothing drawn yet.
  */
-function Demo({ font, kind, tags, glyphs, rev }: { font: FontInfo; kind: Kind; tags: string[]; glyphs: string[]; rev: number }) {
+function Demo({ font, kind, tags, glyphs, rev, onOpenGlyph }: { font: FontInfo; kind: Kind; tags: string[]; glyphs: string[]; rev: number; onOpenGlyph: (n: string) => void }) {
   const charOf = (n: string) => { const g = font.glyphs.find(x => x.name === n); return g && g.unicode >= 0 ? String.fromCodePoint(g.unicode) : null }
   // a few letters the font really has an alternate for
   const text = (() => {
@@ -105,13 +105,22 @@ function Demo({ font, kind, tags, glyphs, rev }: { font: FontInfo; kind: Kind; t
   }, [key])  // eslint-disable-line react-hooks/exhaustive-deps
   const live = text && tags.length && pair?.key === key ? pair : null
   const g = GENERIC[kind.id]
+  // a glyph the feature swaps in that has nothing drawn yet: the picture would be blank, so say why
+  const swapped = live ? [...new Set(live.on.map(x => x.name))].filter(n => !live.off.some(o => o.name === n)) : []
+  const empty = swapped.filter(n => outlines.want(n, null)?.empty)
   return (
-    <div className="mt-2 flex items-center gap-3">
+    <div className="mt-2 flex flex-wrap items-center gap-3">
       {live ? (
         <>
           <Sample font={font} shaped={live.off} label="Without" />
           <span className="text-muted-foreground" aria-hidden>→</span>
           <Sample font={font} shaped={live.on} label="With" />
+          {empty.length > 0 && (
+            <span className="max-w-64 text-[11px] leading-tight text-muted-foreground">
+              <button type="button" className="font-mono text-foreground underline underline-offset-2" onClick={() => onOpenGlyph(empty[0])}>{empty[0]}</button> has nothing drawn yet, so the swap shows blank.
+              Draw it, or start it from its letters.
+            </span>
+          )}
         </>
       ) : (
         <>
@@ -220,8 +229,12 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
   const ligaItems: NewGlyph[] = ['fi', 'fl', 'ff', 'ffi', 'ffl'].flatMap(w => {
     const parts = [...w].map(nameOf)
     const name = parts.join('_')
-    return parts.every(Boolean) && !haveName.has(name) ? [{ name, width: parts.reduce((n, p) => n + (font.glyphs.find(g => g.name === p)?.width ?? 0), 0) }] : []
+    return parts.every(Boolean) && !haveName.has(name) ? [{ name, parts: parts as string[] }] : []
   })
+  /** How wide a ligature's letters are together, for an empty one. */
+  const ligaWidth = (i: NewGlyph) => (i.parts ?? []).reduce((n, p) => n + (font.glyphs.find(g => g.name === p)?.width ?? 0), 0)
+  // ligatures that exist but have nothing drawn: offered the letters side by side
+  const emptyLigs: NewGlyph[] = KINDS[0].glyphs(names).flatMap(n => outlines.want(n, null)?.empty ? [{ name: n, parts: n.split('_'), fill: true }] : [])
   const smcpItems: NewGlyph[] = 'abcdefghijklmnopqrstuvwxyz'.split('').flatMap(c => {
     const lower = nameOf(c), upper = nameOf(c.toUpperCase())
     return lower && upper && !haveName.has(`${lower}.sc`) ? [{ name: `${lower}.sc`, base: upper, scale: 0.8 }] : []
@@ -325,7 +338,7 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
                         : <span className="text-[11px] text-muted-foreground">Not yet</span>}
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">{k.what}</p>
-                  <Demo font={font} kind={k} tags={have.filter(t => t !== 'c2sc')} glyphs={glyphs} rev={rev} />
+                  <Demo font={font} kind={k} tags={have.filter(t => t !== 'c2sc')} glyphs={glyphs} rev={rev} onOpenGlyph={onOpenGlyph} />
                   {glyphs.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       <span className="text-[11px] text-muted-foreground">Your glyphs:</span>
@@ -367,8 +380,16 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
                     </>
                   )}
                   {more === 0 && k.id === 'liga' && ligaItems.length > 0 && (
-                    <Button size="xs" variant="outline" disabled={busy} onClick={() => make(ligaItems, 'Draw them, then press Set it up.')}
-                      title={`Empty glyphs as wide as their letters: ${ligaItems.map(i => i.name).join(', ')}`}><Plus />Make {ligaItems.length} to draw</Button>
+                    <Button size="xs" variant="outline" disabled={busy} onClick={() => make(ligaItems, 'Each starts as its letters side by side, not linked: move the shapes closer and join them into one glyph, then press Set it up.')}
+                      title={`Each starts as its letters side by side, as outlines of their own to pull together: ${ligaItems.map(i => i.name).join(', ')}`}><Plus />Make {ligaItems.length} from the letters</Button>
+                  )}
+                  {more === 0 && k.id === 'liga' && ligaItems.length > 0 && (
+                    <Button size="xs" variant="ghost" disabled={busy} onClick={() => make(ligaItems.map(i => ({ name: i.name, width: ligaWidth(i) })), 'They are empty: draw each one, then press Set it up.')}
+                      title="The same ligatures, but empty, as wide as their letters, to draw from scratch">Make empty</Button>
+                  )}
+                  {k.id === 'liga' && emptyLigs.length > 0 && (
+                    <Button size="xs" variant="outline" disabled={busy} onClick={() => make(emptyLigs, 'Each now has its letters as outlines to move together and join.')}
+                      title={`Puts the letters side by side as outlines in the empty ligatures: ${emptyLigs.map(i => i.name).join(', ')}`}><Wand2 />Fill {emptyLigs.length} empty from the letters</Button>
                   )}
                   {more === 0 && k.id === 'smcp' && smcpItems.length > 0 && (
                     <Button size="xs" variant="outline" disabled={busy} onClick={() => make(smcpItems, 'They start as the capitals at 80%: reshape them, then press Set it up.')}
