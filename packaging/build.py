@@ -44,9 +44,12 @@ def main():
     for src, dest in data:
         args += ["--add-data", f"{src}{SEP}{dest}"]
     run(*args, ROOT / "backend" / "server.py")
-    # Keep the builder's home folder and user name out of the binary: remap source paths, replace the PDB path.
+    # Keep the builder's home folder and user name out of the binary: remap source paths, and with the MSVC
+    # toolchain also replace the PDB path (the GNU toolchain has no PDB and would reject that linker flag).
+    host = subprocess.run(["rustc", "-vV"], capture_output=True, text=True).stdout
+    pdb = " -C link-arg=/PDBALTPATH:%_PDB%" if "msvc" in host else ""
     os.environ["RUSTFLAGS"] = (os.environ.get("RUSTFLAGS", "") + f" --remap-path-prefix={ROOT}=src"
-                               f" --remap-path-prefix={Path.home()}=~ -C link-arg=/PDBALTPATH:%_PDB%").strip()
+                               f" --remap-path-prefix={Path.home()}=~" + pdb).strip()
     run(ROOT / "frontend" / "node_modules" / ".bin" / "tauri.cmd", "build")
 
 
