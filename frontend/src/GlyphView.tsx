@@ -1568,8 +1568,8 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if (mod && k === "'") { e.preventDefault(); setVis(v => ({ ...v, grid: !v.grid })); return }
     if (mod && k === ';') { e.preventDefault(); setVis(v => ({ ...v, guides: !v.guides })); return }
     if (mod && k === '0') { e.preventDefault(); setView(FIT); return }
-    if (mod && (k === '=' || k === '+')) { e.preventDefault(); zoomAt(e.currentTarget.clientWidth / 2, e.currentTarget.clientHeight / 2, 1.25); return }
-    if (mod && k === '-') { e.preventDefault(); zoomAt(e.currentTarget.clientWidth / 2, e.currentTarget.clientHeight / 2, 0.8); return }
+    if (mod && !e.altKey && (k === '=' || k === '+')) { e.preventDefault(); zoomAt(e.currentTarget.clientWidth / 2, e.currentTarget.clientHeight / 2, 1.25); return }
+    if (mod && !e.altKey && k === '-') { e.preventDefault(); zoomAt(e.currentTarget.clientWidth / 2, e.currentTarget.clientHeight / 2, 0.8); return }
     if (mod && k === 'a') { e.preventDefault(); if (pts) setSel(new Set(pts.contours.flatMap((c, ci) => hidden.has(ci) || locked.has(ci) ? [] : c.map((_, pi) => key(ci, pi))))); return }
     if (mod || e.altKey) return
     const step = e.shiftKey ? getSettings().nudgeBig : getSettings().nudge

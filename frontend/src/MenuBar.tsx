@@ -3,6 +3,7 @@ import { api } from './api'
 import { command, type Command } from './commands'
 import { ago, ext, type Recent } from './recent'
 import { TOOLS, VIEWS } from './panels'
+import { zoomUi } from './settings'
 import { PRESETS, readSaved, writeSaved } from './workspaces'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Kbd } from '@/components/ui/kbd'
@@ -100,8 +101,11 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
   add('View', 'Glyph Grid: Latin slots', () => command('grid:latin'), { on: hasFont })
   add('View', 'Glyph Grid: all Unicode slots', () => command('grid:unicode'), { on: hasFont })
   add('View', 'Fit Glyph', () => command('fit'), { on: editing, hint: 'Ctrl 0' })
-  add('View', 'Zoom In', () => command('zoomIn'), { on: editing, hint: 'Ctrl +' })
-  add('View', 'Zoom Out', () => command('zoomOut'), { on: editing, hint: 'Ctrl −' })
+  add('View', 'Zoom Glyph In', () => command('zoomIn'), { on: editing, hint: 'Ctrl +' })
+  add('View', 'Zoom Glyph Out', () => command('zoomOut'), { on: editing, hint: 'Ctrl −' })
+  add('View', 'Zoom Interface In', () => zoomUi(1), { hint: 'Ctrl =', keywords: 'bigger larger scale size' })
+  add('View', 'Zoom Interface Out', () => zoomUi(-1), { hint: 'Ctrl −', keywords: 'smaller scale size' })
+  add('View', 'Reset Interface Zoom', () => zoomUi(0), { hint: 'Ctrl Shift 0', keywords: '100%' })
   add('View', 'Toggle Guides', () => command('toggleGuides'), { on: editing })
   add('View', 'Toggle Shadow Letter', () => command('toggleShadow'), { on: editing, keywords: 'spacing compare accent' })
   add('View', 'Toggle Smart Guides', () => command('toggleSmart'), { on: editing, hint: 'Ctrl U' })
@@ -215,8 +219,12 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
             </MenubarSub>
             <MenubarSeparator />
             <MenubarItem onSelect={() => command('fit')} disabled={!editing}>Fit Glyph<MenubarShortcut>Ctrl 0</MenubarShortcut></MenubarItem>
-            <MenubarItem onSelect={() => command('zoomIn')} disabled={!editing}>Zoom In<MenubarShortcut>Ctrl +</MenubarShortcut></MenubarItem>
-            <MenubarItem onSelect={() => command('zoomOut')} disabled={!editing}>Zoom Out<MenubarShortcut>Ctrl −</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={() => command('zoomIn')} disabled={!editing}>Zoom Glyph In<MenubarShortcut>Ctrl +</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={() => command('zoomOut')} disabled={!editing}>Zoom Glyph Out<MenubarShortcut>Ctrl −</MenubarShortcut></MenubarItem>
+            <MenubarSeparator />
+            <MenubarItem onSelect={() => zoomUi(1)}>Zoom Interface In<MenubarShortcut>Ctrl =</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={() => zoomUi(-1)}>Zoom Interface Out<MenubarShortcut>Ctrl −</MenubarShortcut></MenubarItem>
+            <MenubarItem onSelect={() => zoomUi(0)}>Reset Interface Zoom<MenubarShortcut>Ctrl Shift 0</MenubarShortcut></MenubarItem>
             <MenubarSeparator />
             <MenubarCheckboxItem checked={!!aids?.guides} onCheckedChange={() => command('toggleGuides')} disabled={!editing}>Guides<MenubarShortcut>Ctrl ;</MenubarShortcut></MenubarCheckboxItem>
             <MenubarCheckboxItem checked={!!aids?.shadow} onCheckedChange={() => command('toggleShadow')} disabled={!editing}>Shadow Letter</MenubarCheckboxItem>

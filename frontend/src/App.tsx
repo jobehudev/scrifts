@@ -12,7 +12,7 @@ import { propsStore } from './propsStore'
 import { latestOnly } from './latestOnly'
 import type { NewFont } from './NewFontDialog'
 import { AxisDialog, type Brace, CheckDialog, EditMasterDialog, FamilyDialog, MasterBar, RemoveMasterDialog, SoloMasterBar, samePath, type BlendGlyph, type Check, type Family, type Master, type MasterOps } from './FamilyBar'
-import { useSettings } from './settings'
+import { useSettings, zoomUi } from './settings'
 import { addRecent, ago, clearRecent, ext, loadRecent, removeRecent } from './recent'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
@@ -669,6 +669,11 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'F11' && font) { e.preventDefault(); dockRef.current?.maximize(); return }
       if (!(e.ctrlKey || e.metaKey)) return
+      // interface zoom: Ctrl = / Ctrl -, unless the glyph canvas took the key for its own zoom (Ctrl Alt = / - always zoom the interface)
+      if ((e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_') && (e.altKey || !e.defaultPrevented)) {
+        e.preventDefault(); zoomUi(e.key === '-' || e.key === '_' ? -1 : 1); return
+      }
+      if (e.shiftKey && !e.altKey && (e.key === '0' || e.key === ')')) { e.preventDefault(); zoomUi(0); return }
       if (e.altKey && font && e.key.toLowerCase() === 'z') { e.preventDefault(); void undoFont(); return }
       if (e.altKey && font && /^[0-9]$/.test(e.key)) { e.preventDefault(); const n = Object.keys(PRESETS)[e.key === '0' ? 9 : +e.key - 1]; if (n) dockRef.current?.workspace(n); return }  // Ctrl Alt 1-9, 0: the presets
       if (e.key === 'o') { e.preventDefault(); open() }
@@ -816,7 +821,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
             <div className="min-h-0 flex-1"><Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading the workspace…</p>}><Dock render={renderView} onActive={setView} onOpen={setOpenPanels} handle={dockRef} axes={font.axes.length > 0} layersEl={layersEl} /></Suspense></div>
           </main>
         ) : (
-          <main className="grid min-h-0 overflow-y-auto md:grid-cols-[5fr_7fr]">
+          <main className="grid min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden md:grid-cols-[5fr_7fr]">
             {/* left: the picture, edge to edge, with the name over it */}
             <div className="relative hidden min-h-80 overflow-hidden border-r md:block">
               <img src="/splash.jpg" alt="" draggable={false} className="absolute inset-0 size-full object-cover object-top" />
@@ -829,7 +834,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
               </div>
             </div>
             {/* right: the two ways to begin, then what you had open */}
-            <div className="mx-auto flex w-full max-w-2xl flex-col justify-center gap-5 p-10">
+            <div className="min-h-0 overflow-y-auto"><div className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center gap-5 p-10">
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={open} disabled={!!busy}>
                   {busy ? <Loader2 className="animate-spin" /> : <FolderOpen />}Open a font
@@ -867,7 +872,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
                   ))}
                 </div>
               )}
-            </div>
+            </div></div>
           </main>
         )}
 

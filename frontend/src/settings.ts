@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { toast } from 'sonner'
 import { resetTheme } from './canvas'
 import { deriveTokens, inkTokens, type Custom } from './theme'
 
@@ -45,6 +46,14 @@ function apply(s: Settings) {
 apply(current)
 
 export const getSettings = () => current
+
+export const UI_SCALE = { min: 70, max: 200, step: 10 }
+/** Interface zoom for the keyboard and the View menu: +1 / -1 a step, 0 back to 100%. Says the new size. */
+export function zoomUi(dir: -1 | 0 | 1) {
+  const next = dir === 0 ? 100 : Math.min(UI_SCALE.max, Math.max(UI_SCALE.min, Math.round(current.uiScale / UI_SCALE.step) * UI_SCALE.step + dir * UI_SCALE.step))
+  setSettings({ uiScale: next })
+  toast.message(`Interface ${next}%`, { id: 'ui-zoom', duration: 900 })
+}
 
 export function setSettings(patch: Partial<Settings>) {
   current = { ...current, ...patch }
