@@ -50,6 +50,7 @@ class FeaturesReq(FontReq):
 class ShapeReq(FontReq):
     text: str
     features: dict[str, bool] = {}
+    script: str | None = None  # ISO 15924 (Arab, Deva, Hani ...); HarfBuzz guesses from the text when absent
 
 
 @app.get("/api/features")
@@ -83,6 +84,8 @@ def shape(req: ShapeReq):
     font = hb.Font(hb.Face(hb.Blob(data)))
     buf = hb.Buffer()
     buf.add_str(req.text[:500])
+    if req.script and len(req.script) == 4:
+        buf.script = req.script
     buf.guess_segment_properties()
     hb.shape(font, buf, req.features)
     return [{"name": order[i.codepoint], "cluster": i.cluster, "ax": p.x_advance, "dx": p.x_offset, "dy": p.y_offset}

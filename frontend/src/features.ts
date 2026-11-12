@@ -82,3 +82,36 @@ export const featureTags = (code: string, extra: string[] = []) =>
 
 /** Features HarfBuzz applies to Latin text unless told otherwise. */
 export const ON_BY_DEFAULT = new Set(['ccmp', 'locl', 'rlig', 'liga', 'clig', 'calt', 'kern', 'mark', 'mkmk', 'rvrn'])
+
+/** A script and language a feature is registered under: `arab{dflt}`, `latn{TRK}`. */
+export type LangSys = { script: string; lang: string }
+const LANGSYS = /^[ \t]*languagesystem[ \t]+(\w{3,4})[ \t]+(\w{3,4})[ \t]*;[ \t]*$/gm
+
+export const languageSystems = (code: string): LangSys[] =>
+  [...code.matchAll(LANGSYS)].map(m => ({ script: m[1], lang: m[2] }))
+
+const same = (a: LangSys, b: LangSys) => a.script === b.script && a.lang.toLowerCase() === b.lang.toLowerCase()
+
+/** The code with one more `languagesystem` line, after the last one (DFLT dflt first, as the spec wants). */
+export function addLanguageSystem(code: string, sys: LangSys): string {
+  const have = languageSystems(code)
+  if (have.some(h => same(h, sys))) return code
+  const line = `languagesystem ${sys.script} ${sys.lang};`
+  if (!have.length) {
+    const first = sys.script === 'DFLT' && sys.lang === 'dflt' ? '' : 'languagesystem DFLT dflt;\n'
+    return `${first}${line}\n\n${code.replace(/^\s+/, '')}`
+  }
+  const last = [...code.matchAll(LANGSYS)].at(-1)!
+  const at = last.index! + last[0].length
+  return code.slice(0, at) + '\n' + line + code.slice(at)
+}
+
+export function removeLanguageSystem(code: string, sys: LangSys): string {
+  return code
+    .split('\n')
+    .filter(l => {
+      const m = /^[ \t]*languagesystem[ \t]+(\w+)[ \t]+(\w+)[ \t]*;/.exec(l)
+      return !(m && same({ script: m[1], lang: m[2] }, sys))
+    })
+    .join('\n')
+}

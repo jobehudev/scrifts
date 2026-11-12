@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { generate, featureTags } from './features.ts'
+import { generate, featureTags, languageSystems, addLanguageSystem, removeLanguageSystem } from './features.ts'
 
 const names = ['f', 'i', 'l', 'f_i', 'f_f', 'f_f_i', 'x_y', 'f_i.alt', 'a', 'a.sc', 'b.sc', 'g', 'g.ss01', 'a.ss02']
 
@@ -58,4 +58,21 @@ test('all: every generator, one header, aalt sees the new features, a second run
   for (const tag of ['liga', 'smcp', 'c2sc', 'ss01', 'onum', 'tnum', 'salt']) assert.ok(out.includes(`} ${tag};`), tag)
   assert.match(out, /feature aalt \{\n  feature smcp;\n  feature c2sc;\n  feature salt;\n  feature onum;\n  feature tnum;\n  feature ss01;\n\} aalt;$/)
   assert.equal(generate('all', alts, out), '')
+})
+
+test('language systems: read, add after the last one, remove, no duplicates', () => {
+  const code = 'languagesystem DFLT dflt;\nlanguagesystem latn dflt;\n\nfeature liga {\n  sub f i by f_i;\n} liga;\n'
+  assert.deepEqual(languageSystems(code), [{ script: 'DFLT', lang: 'dflt' }, { script: 'latn', lang: 'dflt' }])
+  const more = addLanguageSystem(addLanguageSystem(code, { script: 'arab', lang: 'dflt' }), { script: 'latn', lang: 'TRK' })
+  assert.deepEqual(languageSystems(more).map(l => `${l.script}{${l.lang}}`), ['DFLT{dflt}', 'latn{dflt}', 'arab{dflt}', 'latn{TRK}'])
+  assert.ok(more.includes('feature liga {'), 'the features are left alone')
+  assert.equal(addLanguageSystem(more, { script: 'arab', lang: 'dflt' }), more)
+  const less = removeLanguageSystem(more, { script: 'arab', lang: 'dflt' })
+  assert.deepEqual(languageSystems(less).map(l => l.script), ['DFLT', 'latn', 'latn'])
+  assert.ok(less.includes('feature liga {'))
+})
+
+test('adding a script to code with none puts DFLT dflt first', () => {
+  const out = addLanguageSystem('feature liga {\n  sub f i by f_i;\n} liga;\n', { script: 'hani', lang: 'dflt' })
+  assert.deepEqual(languageSystems(out).map(l => l.script), ['DFLT', 'hani'])
 })

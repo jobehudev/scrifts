@@ -27,6 +27,13 @@ const nameFor = (w: number) => WEIGHT_NAMES.reduce((a, b) => Math.abs(b[0] - w) 
 const weightFor = (style: string) => WEIGHT_NAMES.find(([, n]) => n.toLowerCase() === style.replace(/\s/g, '').toLowerCase())?.[0]
 
 /** The masters of the family, as tabs; the open one is the font being edited. */
+/** A master as a file tab: flat and touching, the open one lit by an accent line on top. */
+const tabClass = (on: boolean, brace = false) =>
+  `relative flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap border-r px-3 outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 ${brace ? 'italic ' : ''}${
+    on ? 'bg-background text-foreground before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-primary'
+       : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'}`
+const addTabClass = 'flex h-7 w-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-accent/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50'
+
 export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, busy, check, onCheck, weight, onWeight, onAddHere, axisVals, onAxis, onAddAxis, glyph, onAddBrace, onRemoveBrace }: {
   family: Family; current: string; onSwitch: (m: Master) => void; onAdd: () => void; onRemove: (m: Master) => void; onEdit: (m: Master) => void; busy: boolean
   check: Check | null; onCheck: () => void
@@ -60,17 +67,16 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
   }, [playing, lo, hi, onWeight])
   const between = weight !== null && !family.masters.some(m => family.axes.every(a => (m.location[a.name] ?? a.default) === here[a.name]))
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b px-2 py-1 text-xs">
-      <span className="mr-1 text-muted-foreground">Masters</span>
+    <div className="flex flex-wrap items-stretch border-b bg-muted/30 text-xs">
+      <div role="tablist" aria-label="Masters" className="flex min-w-0 max-w-full items-stretch overflow-x-auto border-r">
       {family.masters.map(m => {
         const on = samePath(m.path, current)
         return (
           <ContextMenu key={m.path}>
           <ContextMenuTrigger asChild>
-          <button onClick={() => !on && onSwitch(m)} disabled={busy} title={m.path} aria-pressed={on}
-            aria-label={`${m.name} master, weight ${m.weight}`}
-            className={`flex items-baseline gap-1.5 rounded-md border px-2 py-0.5 ${on ? 'border-primary bg-primary/15 text-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
-            {m.name}<span className="font-mono text-[10px] opacity-70">{m.weight}{extra.map(a => ` ${a.tag} ${m.location[a.name] ?? a.default}`).join('')}</span>
+          <button role="tab" onClick={() => !on && onSwitch(m)} disabled={busy} title={m.path} aria-selected={on}
+            aria-label={`${m.name} master, weight ${m.weight}`} className={tabClass(on)}>
+            {m.name}<span className="font-mono text-[10px] opacity-60">{m.weight}{extra.map(a => ` ${a.tag} ${m.location[a.name] ?? a.default}`).join('')}</span>
           </button>
           </ContextMenuTrigger>
           <ContextMenuContent>
@@ -87,9 +93,8 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
         return (
           <ContextMenu key={b.path}>
             <ContextMenuTrigger asChild>
-              <button onClick={() => !on && onSwitch(b)} disabled={busy} aria-pressed={on} title={`Brace layer: ${b.glyphs.join(' ')} get an extra shape here`}
-                aria-label={`Brace layer at weight ${b.weight}`}
-                className={`flex items-baseline gap-1.5 rounded-md border border-dashed px-2 py-0.5 ${on ? 'border-primary bg-primary/15 text-foreground' : 'text-muted-foreground hover:bg-accent'}`}>
+              <button role="tab" onClick={() => !on && onSwitch(b)} disabled={busy} aria-selected={on} title={`Brace layer: ${b.glyphs.join(' ')} get an extra shape here`}
+                aria-label={`Brace layer at weight ${b.weight}`} className={tabClass(on, true)}>
                 {'{'}{Math.round(b.weight * 10) / 10}{extra.map(a => ` ${a.tag} ${Math.round((b.location[a.name] ?? a.default) * 10) / 10}`).join('')}{'}'}
                 <span className="max-w-24 truncate font-mono text-[10px] opacity-70">{b.glyphs.join(' ')}</span>
               </button>
@@ -105,10 +110,12 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
           </ContextMenu>
         )
       })}
-      <Button size="icon-xs" variant="ghost" onClick={onAdd} disabled={busy} aria-label="Add master"><Plus /></Button>
+      <button type="button" onClick={onAdd} disabled={busy} aria-label="Add master" title="Add a master" className={addTabClass}><Plus className="size-3.5" /></button>
+      </div>
+      <div className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 px-2 py-0.5">
       <Button size="xs" variant="ghost" onClick={onAddAxis} disabled={busy} title="Add an axis such as Width or Optical size">+ Axis</Button>
       {family.masters.length > 1 && ax && (
-        <div className="ml-3 flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input type="range" min={ax.min} max={ax.max} step={1} value={weight ?? ax.default}
             onChange={e => onWeight(Number(e.target.value))} aria-label="Preview weight" className="w-32 accent-primary" />
           <span className={`w-8 font-mono ${weight === null ? 'text-muted-foreground' : ''}`}>{weight ?? '—'}</span>
@@ -144,6 +151,7 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
               : <span className="flex items-center gap-1 text-muted-foreground"><CircleCheck className="size-3.5" />Compatible</span>}
         </button>
       )}
+      </div>
     </div>
   )
 }
@@ -354,11 +362,12 @@ export function EditMasterDialog({ master, others, onCancel, onSubmit }: {
 /** A font that isn't in a family yet: its one master, and + to add another. */
 export function SoloMasterBar({ style, canAdd, onAdd, busy }: { style: string; canAdd: boolean; onAdd: () => void; busy: boolean }) {
   return (
-    <div className="flex items-center gap-1 border-b px-2 py-1 text-xs">
-      <span className="mr-1 text-muted-foreground">Masters</span>
-      <span className="rounded-md border border-primary bg-primary/15 px-2 py-0.5">{style}</span>
-      <Button size="icon-xs" variant="ghost" onClick={onAdd} disabled={busy || !canAdd} aria-label="Add master"
-        title={canAdd ? 'Add a master (e.g. a bolder weight) to make a variable family' : 'Masters are .sfd files: save this font as .sfd first'}><Plus /></Button>
+    <div className="flex items-stretch border-b bg-muted/30 text-xs">
+      <div role="tablist" aria-label="Masters" className="flex items-stretch border-r">
+        <span role="tab" aria-selected className={tabClass(true)}>{style}</span>
+        <button type="button" onClick={onAdd} disabled={busy || !canAdd} aria-label="Add master" className={addTabClass}
+          title={canAdd ? 'Add a master (e.g. a bolder weight) to make a variable family' : 'Masters are .sfd files: save this font as .sfd first'}><Plus className="size-3.5" /></button>
+      </div>
     </div>
   )
 }
