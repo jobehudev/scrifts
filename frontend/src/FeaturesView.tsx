@@ -46,6 +46,91 @@ const KINDS: Kind[] = [
     tags: c => SUFFIX_FEATURES.filter(t => featureTags(c).includes(t)), glyphs: ns => ns.filter(n => SUFFIX_FEATURES.includes(n.split('.').pop() ?? '') && n.includes('.')) },
 ]
 
+/** What to show before the font has the feature: plain text in the interface font, so the idea is clear without any glyphs. */
+const GENERIC: Record<Kind['id'], { before: string; after: string; beforeStyle?: React.CSSProperties; afterStyle?: React.CSSProperties; note: string }> = {
+  liga: { before: 'fi', after: '\uFB01', note: 'two letters become one joined glyph' },
+  smcp: { before: 'Quiet', after: 'Quiet', afterStyle: { fontVariantCaps: 'small-caps' }, note: 'lowercase letters become small capitals' },
+  ss: { before: 'a', after: '\u0251', note: 'a letter switches to a second style' },
+  alt: { before: '3470', after: '3470', afterStyle: { fontFamily: 'Georgia, serif' }, note: 'figures switch to old-style, tabular and so on' },
+}
+
+/** A word drawn from the font's own glyphs, shaped with these features. */
+function Sample({ font, shaped, label }: { font: FontInfo; shaped: Shaped | null; label: string }) {
+  useOutlineVersion()
+  const ref = useCanvas((ctx, w, h) => {
+    if (!shaped) return
+    const t = theme()
+    const size = Math.min(40, h * 0.8), s = size / font.em
+    const total = shaped.reduce((n, g) => n + g.ax, 0) * s
+    let x = Math.max(6, (w - total) / 2)
+    const y = h / 2 + (font.ascent - font.descent) * s / 2
+    ctx.fillStyle = t.ink
+    for (const g of shaped) {
+      const o = outlines.want(g.name, null)
+      if (o) { ctx.save(); ctx.translate(x + g.dx * s, y - g.dy * s); ctx.scale(s, -s); ctx.fill(o.path); ctx.restore() }
+      x += g.ax * s
+    }
+  })
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="relative h-12 w-28 rounded border bg-background"><canvas ref={ref} aria-label={label} className="absolute inset-0 size-full" /></div>
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+/**
+ * A picture of what the swap does: the same text without it and with it. Once the font has the feature it is drawn with the font's
+ * own glyphs (shaped with the feature off, then on); before that, a generic example, so the idea comes across with nothing drawn yet.
+ */
+function Demo({ font, kind, tags, glyphs, rev }: { font: FontInfo; kind: Kind; tags: string[]; glyphs: string[]; rev: number }) {
+  const charOf = (n: string) => { const g = font.glyphs.find(x => x.name === n); return g && g.unicode >= 0 ? String.fromCodePoint(g.unicode) : null }
+  // a few letters the font really has an alternate for
+  const text = (() => {
+    const first = glyphs[0]
+    if (!first) return ''
+    if (kind.id === 'liga') return first.split('_').map(charOf).join('')
+    const bases = [...new Set(glyphs.map(g => g.split('.')[0]))].slice(0, kind.id === 'alt' ? 4 : 3).map(charOf)
+    return bases.every(Boolean) ? bases.join('') : ''
+  })()
+  const [pair, setPair] = useState<{ key: string; off: Shaped; on: Shaped } | null>(null)
+  const key = `${text}|${tags.join()}|${rev}`
+  useEffect(() => {
+    if (!text || !tags.length) return
+    let stale = false
+    const flags = (v: boolean) => Object.fromEntries(tags.map(t => [t, v]))
+    Promise.all([api<Shaped>('/api/shape', { text, features: flags(false) }), api<Shaped>('/api/shape', { text, features: flags(true) })])
+      .then(([off, on]) => { if (!stale) setPair({ key, off, on }) }).catch(() => {})
+    return () => { stale = true }
+  }, [key])  // eslint-disable-line react-hooks/exhaustive-deps
+  const live = text && tags.length && pair?.key === key ? pair : null
+  const g = GENERIC[kind.id]
+  return (
+    <div className="mt-2 flex items-center gap-3">
+      {live ? (
+        <>
+          <Sample font={font} shaped={live.off} label="Without" />
+          <span className="text-muted-foreground" aria-hidden>→</span>
+          <Sample font={font} shaped={live.on} label="With" />
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="flex h-12 w-28 items-center justify-center rounded border bg-background text-2xl" style={g.beforeStyle}>{g.before}</span>
+            <span className="text-[10px] text-muted-foreground">Without</span>
+          </div>
+          <span className="text-muted-foreground" aria-hidden>→</span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="flex h-12 w-28 items-center justify-center rounded border bg-background text-2xl" style={g.afterStyle}>{g.after}</span>
+            <span className="text-[10px] text-muted-foreground">With</span>
+          </div>
+          <span className="min-w-0 max-w-40 text-[11px] leading-tight text-muted-foreground">Example: {g.note}</span>
+        </>
+      )}
+    </div>
+  )
+}
+
 const subs = (text: string) => (text.match(/^\s*sub\s/gm) ?? []).length
 /** How many swaps the code has under these feature tags. */
 const swapsIn = (code: string, tags: string[]) => tags.reduce((n, t) => n + subs(blockOf(code, t)), 0)
@@ -240,6 +325,7 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
                         : <span className="text-[11px] text-muted-foreground">Not yet</span>}
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">{k.what}</p>
+                  <Demo font={font} kind={k} tags={have.filter(t => t !== 'c2sc')} glyphs={glyphs} rev={rev} />
                   {glyphs.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
                       <span className="text-[11px] text-muted-foreground">Your glyphs:</span>
