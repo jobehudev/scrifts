@@ -2046,3 +2046,22 @@ def test_make_glyphs_for_features(client):
     assert client.get("/api/glyph/f_i_test", params={"fid": fid}).json()["width"] == 777
     again = client.post("/api/make-glyphs", json={"fid": fid, "items": items}).json()
     assert again["created"] == []
+
+
+@pytest.mark.skipif(not SFD.exists(), reason="run tests/fetch_fixtures.sh")
+def test_outlines_at_a_weight_include_glyphs_the_variable_font_lacks(client):
+    """A glyph made after the variable font was compiled is missing from it; the page used to ask for it forever."""
+    import server
+
+    class Compiled:  # a variable font that knows no glyph of ours
+        axes = [{"tag": "wght", "default": 400, "min": 100, "max": 900}]
+        def outlines(self, location, names): return []
+
+    fid = client.post("/api/open", json={"path": str(SFD)}).json()["fid"]
+    client.post("/api/make-glyphs", json={"fid": fid, "items": [{"name": "f_i_loop", "width": 640}]})
+    server.variables[fid] = Compiled()
+    try:
+        got = client.post("/api/outlines", json={"fid": fid, "names": ["f_i_loop"], "location": {"wght": 700}}).json()
+    finally:
+        server.variables.pop(fid, None)
+    assert [o["name"] for o in got] == ["f_i_loop"] and got[0]["width"] == 640

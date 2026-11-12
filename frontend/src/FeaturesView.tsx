@@ -135,7 +135,7 @@ export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: (
       const r = await api<{ created: string[] }>('/api/make-glyphs', { items })
       onChanged()
       toast.success(`Made ${r.created.length} glyph${r.created.length === 1 ? '' : 's'} to draw`, {
-        description: `${r.created.slice(0, 8).join(', ')}${r.created.length > 8 ? ' ...' : ''}. ${what}`,
+        description: `${r.created.slice(0, 8).join(', ')}${r.created.length > 8 ? ' ...' : ''}. ${what}${font.axes.length ? ' They are in the open master only: copy them to the other masters from the glyph grid (right-click).' : ''}`,
       })
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }

@@ -145,6 +145,8 @@ export class OutlineStore {
   private points = new Map<string, Points>()
   private wanted = new Map<string, { names: Set<string>; loc: Location | null }>()
   private pending = new Set<string>()
+  /** Names the server did not send back, and when: asked again no sooner than a few seconds later, never in a tight loop. */
+  private missing = new Map<string, number>()
   private timer = 0
   private subs = new Set<() => void>()
   version = 0
@@ -167,6 +169,8 @@ export class OutlineStore {
     const k = locKey(loc) + '|' + name
     const hit = this.cache.get(k)
     if (hit || this.pending.has(k)) return hit
+    const gone = this.missing.get(k)
+    if (gone !== undefined && Date.now() - gone < 5000) return undefined
     this.pending.add(k)
     const lk = locKey(loc)
     if (!this.wanted.has(lk)) this.wanted.set(lk, { names: new Set(), loc })
@@ -185,16 +189,21 @@ export class OutlineStore {
         const res = await api<RawOutline[]>('/api/outlines',
           this.fid ? { names: list, location: loc, fid: this.fid } : { names: list, location: loc })
         for (const o of res) this.put(o, loc, false)
-        for (const n of list) this.pending.delete(locKey(loc) + '|' + n)
+        for (const n of list) {
+          const k = locKey(loc) + '|' + n
+          this.pending.delete(k)
+          if (!this.cache.has(k)) this.missing.set(k, Date.now())  // asked for, not sent: do not ask again at once
+        }
         this.emit()
       } catch {
-        for (const n of list) this.pending.delete(locKey(loc) + '|' + n)
+        for (const n of list) { const k = locKey(loc) + '|' + n; this.pending.delete(k); this.missing.set(k, Date.now()) }
       }
     }
   }
 
   put(o: RawOutline, loc: Location | null, notify = true) {
     if (!loc && !('contours' in o)) this.points.delete(o.name)
+    this.missing.delete(locKey(loc) + '|' + o.name)
     this.cache.set(locKey(loc) + '|' + o.name, {
       name: o.name, width: o.width, lsb: o.lsb ?? 0, rsb: o.rsb ?? 0, path: toPath(o),
       uses: refNames(o), empty: !o.d.trim() && !o.refs?.length, box: rawBox(o),
@@ -214,6 +223,7 @@ export class OutlineStore {
     this.points.clear()
     this.pending.clear()
     this.wanted.clear()
+    this.missing.clear()
     this.emit()
   }
 

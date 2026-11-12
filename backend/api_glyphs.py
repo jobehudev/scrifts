@@ -114,7 +114,14 @@ def outlines(req: OutlinesReq):
     v = variables.get(req.fid)
     if _is_default(v, req.location):
         return _call("outlines", fid=req.fid, names=req.names)
-    return v.outlines(req.location, req.names)
+    out = v.outlines(req.location, req.names)
+    # a glyph made since the variable font was compiled is not in it: show the open master's drawing rather than nothing
+    # (asking again for a glyph that never comes back would never stop)
+    got = {o["name"] for o in out}
+    missing = [n for n in req.names if n not in got]
+    if missing:
+        out += _call("outlines", fid=req.fid, names=missing)
+    return out
 
 
 class GlyphsReq(FontReq):
