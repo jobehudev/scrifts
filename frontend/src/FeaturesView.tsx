@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Check, ChevronRight, Plus, RotateCcw, Wand2, X } from 'lucide-react'
 import { Popover } from 'radix-ui'
 import { api, outlines, type FontInfo } from './api'
 import { theme, useCanvas, useOutlineVersion } from './canvas'
-import { addLanguageSystem, blockOf, featureTags, generate, languageSystems, ON_BY_DEFAULT, removeLanguageSystem, SUFFIX_FEATURES, syncLanguageSystems, type Generator } from './features'
+import { addLanguageSystem, blockOf, featureTags, generate, languageSystems, removeLanguageSystem, SUFFIX_FEATURES, syncLanguageSystems, type Generator } from './features'
 import { BLOCKS, shortName, useLanguages } from './gridScripts'
 import { LanguageBar } from './LanguageBar'
-import { LANGUAGES, SCRIPTS, scriptName, scriptOf } from './scripts'
+import { LANGUAGES, SCRIPTS, scriptName } from './scripts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { Select } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { CodeEditor } from './CodeEditor'
 
 type Features = { code: string; lookups: { name: string; type: string; features: string[] }[]; gpos_features: string[] }
@@ -140,6 +139,16 @@ function Demo({ font, kind, tags, glyphs, rev, onOpenGlyph }: { font: FontInfo; 
   )
 }
 
+/** A short text that shows this kind of swap with the font's own letters (fi fl ff for ligatures, the letters that have a small capital ...). */
+function exampleOf(font: FontInfo, kind: Kind, glyphs: string[]): string {
+  const charOf = (n: string) => { const g = font.glyphs.find(x => x.name === n); return g && g.unicode >= 0 ? String.fromCodePoint(g.unicode) : null }
+  const words = kind.id === 'liga'
+    ? glyphs.slice(0, 4).map(g => g.split('_').map(charOf))
+    : [[...new Set(glyphs.map(g => g.split('.')[0]))].slice(0, 12).map(charOf)]
+  const text = words.filter(w => w.length && w.every(Boolean)).map(w => w.join('')).join(' ')
+  return text || kind.sample
+}
+
 const subs = (text: string) => (text.match(/^\s*sub\s/gm) ?? []).length
 /** How many swaps the code has under these feature tags. */
 const swapsIn = (code: string, tags: string[]) => tags.reduce((n, t) => n + subs(blockOf(code, t)), 0)
@@ -151,16 +160,12 @@ const SHOWN = 14
  * The font's languages are the same list the glyph grid uses, and setting a row up registers its swaps for all of them.
  * The code behind it (OpenType feature code, compiled by FontForge) is under Advanced. The preview shapes with HarfBuzz.
  */
-export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo; onChanged: () => void; onOpenGlyph: (name: string) => void }) {
+export function FeaturesView({ font, onChanged, onOpenGlyph, onOpenSpacing }: { font: FontInfo; onChanged: () => void; onOpenGlyph: (name: string) => void; onOpenSpacing: () => void }) {
   const [data, setData] = useState<Features | null>(null)
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [text, setText] = useState(() => localStorage.getItem('forge.featText') ?? 'office fifty 1/2')
-  const [toggles, setToggles] = useState<Record<string, boolean>>({})
-  const [shaped, setShaped] = useState<Shaped>([])
   const [rev, setRev] = useState(0)  // bump after apply to reshape
-  const [testScript, setTestScript] = useState<string>('auto')  // the script the preview text is shaped as; 'auto' lets HarfBuzz guess
   const [newScript, setNewScript] = useState('arab')
   const [newLang, setNewLang] = useState('dflt')
   const { chosen, active, setChosen } = useLanguages(font.familyname, font.glyphs)
@@ -169,19 +174,6 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
     api<Features>('/api/features').then(d => { setData(d); setCode(d.code) })
       .catch(e => (e as Error).name !== 'AbortError' && setError((e as Error).message))
   }, [font.path])
-
-  const tags = featureTags(data?.code ?? '', data?.gpos_features)
-  const isOn = useCallback((t: string) => toggles[t] ?? ON_BY_DEFAULT.has(t), [toggles])
-
-  useEffect(() => {
-    localStorage.setItem('forge.featText', text)
-    const feats = Object.fromEntries(tags.map(t => [t, isOn(t)]))
-    const id = setTimeout(() => {
-      api<Shaped>('/api/shape', { text, features: feats, script: scriptOf(testScript)?.iso }).then(setShaped).catch(() => {})
-    }, 250)
-    return () => clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, toggles, rev, testScript, tags.join()])
 
   /** Compile this feature code into the font. All or nothing. */
   const applyCode = async (next: string, done?: string) => {
@@ -217,11 +209,6 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
     const add = addFor(k)
     if (add) void applyCode(syncLanguageSystems(withAdded(code, add), active), `${k.title} set up`)
   }
-  const tryIt = (k: Kind, on: string[]) => {
-    setText(k.sample)
-    setToggles(s => ({ ...s, ...Object.fromEntries(on.map(t => [t, true])) }))
-  }
-
   // glyphs to draw, made from the letters the font has: ligatures empty, small capitals as 80% copies of the capitals
   const glyphByCp = new Map(font.glyphs.filter(g => g.unicode >= 0).map(g => [g.unicode, g]))
   const nameOf = (ch: string) => glyphByCp.get(ch.codePointAt(0)!)?.name
@@ -265,34 +252,27 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
 
+  /** Open Spacing with an example of this kind, Features on and this kind switched on (Spacing may not be open yet, so it is also left where it looks on opening). */
+  const showInSpacing = (k: Kind, on: string[], glyphs: string[]) => {
+    const text = exampleOf(font, k, glyphs)
+    const choice = JSON.parse(localStorage.getItem('forge.proof.featChoice') ?? '{}') as Record<string, boolean>
+    localStorage.setItem('forge.spacing.' + font.familyname, text); localStorage.setItem('forge.spacing', text)
+    localStorage.setItem('forge.proof.features', 'true')
+    localStorage.setItem('forge.proof.featChoice', JSON.stringify({ ...choice, ...Object.fromEntries(on.map(t => [t, true])) }))
+    window.dispatchEvent(new CustomEvent('forge:spacing-example', { detail: { text, on } }))
+    onOpenSpacing()
+  }
+
   const dirty = data !== null && code !== data.code
   const systems = languageSystems(code)
-  const rtl = !!scriptOf(testScript)?.rtl
   // languages the font has that its compiled features are not registered for
   const registered = languageSystems(data?.code ?? '')
   const unregistered = data && data.lookups.length > 0 ? active.filter(t => !registered.some(r => r.script.toLowerCase() === t.toLowerCase())) : []
 
   useOutlineVersion()
-  const ref = useCanvas((ctx, w, h) => {
-    const t = theme()
-    const size = Math.min(96, h * 0.55)
-    const s = size / font.em
-    const base = h / 2 + (font.ascent - font.descent) * s / 2
-    let x = 16, y = base
-    ctx.fillStyle = t.ink
-    for (const g of shaped) {
-      const o = outlines.want(g.name, null)
-      if (x + g.ax * s > w - 16 && x > 16) { x = 16; y += size * 1.3 }
-      if (o) {
-        ctx.save(); ctx.translate(x + g.dx * s, y - g.dy * s); ctx.scale(s, -s); ctx.fill(o.path); ctx.restore()
-      }
-      x += g.ax * s
-    }
-  })
-
   return (
-    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
-      <div className="min-h-0 overflow-y-auto">
+    <div className="h-full">
+      <div className="h-full overflow-y-auto">
         <div className="space-y-1 border-b px-4 py-3">
           <h2 className="text-sm font-semibold">What your font can do while someone types</h2>
           <p className="max-w-3xl text-xs leading-relaxed text-muted-foreground">
@@ -372,11 +352,8 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
                 <div className="flex shrink-0 items-center gap-2">
                   {have.length > 0 && (
                     <>
-                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">In preview
-                        <Switch checked={have.every(isOn)} label={`Show ${k.title} in the live preview`}
-                          onCheckedChange={on => setToggles(s => ({ ...s, ...Object.fromEntries(have.map(t => [t, on])) }))} />
-                      </label>
-                      <Button size="xs" variant="ghost" onClick={() => tryIt(k, have)} title={`Types "${k.sample}" in the live preview below and switches this on`}>Show example</Button>
+                      <Button size="xs" variant="outline" onClick={() => showInSpacing(k, have, glyphs)}
+                        title="Opens Spacing with an example typed, and this switched on: set as it will be typed, with its swaps">Show in Spacing</Button>
                     </>
                   )}
                   {more === 0 && k.id === 'liga' && ligaItems.length > 0 && (
@@ -406,7 +383,7 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
             )
           })}
           <div className="space-y-1 text-xs text-muted-foreground">
-            <p>Every glyph made for a swap is in the glyph grid under <span className="text-foreground">Alternates</span>. To see them in text, use Spacing's <span className="text-foreground">Features</span> button, or type <code>/</code> and a glyph name there (for example <code>/f_i</code>).</p>
+            <p>Every glyph made for a swap is in the glyph grid under <span className="text-foreground">Alternates</span>. To see them in text, press <span className="text-foreground">Show in Spacing</span> on a row, or use Spacing's own <span className="text-foreground">Features</span> and <span className="text-foreground">Glyphs</span> buttons.</p>
             <p>Kerning (space between letter pairs) is in Spacing, and where accents sit is in Accents.</p>
           </div>
         </div>
@@ -469,35 +446,10 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
               <Button size="sm" onClick={apply} disabled={busy || !dirty}><Check />Apply <Kbd>Ctrl ↵</Kbd></Button>
             </div>
             <CodeEditor value={code} onChange={setCode} onRun={() => { if (dirty) void apply() }} indent={2} label="Feature code" className="h-72 rounded-md" />
-            {tags.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1">
-                <span className="text-muted-foreground">Switch features on and off in the preview:</span>
-                {tags.map(tag => (
-                  <button key={tag} onClick={() => setToggles(s => ({ ...s, [tag]: !isOn(tag) }))} aria-pressed={isOn(tag)}
-                    className={`rounded border px-1.5 py-0.5 font-mono ${isOn(tag) ? 'border-primary bg-primary/15 text-foreground' : 'text-muted-foreground'}`}>
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </details>
       </div>
 
-      <div className="border-t">
-        <div className="flex flex-wrap items-center gap-2 p-2 text-xs">
-          <span className="font-medium">Live preview</span>
-          <Input value={text} onChange={e => { setText(e.target.value); setTestScript('auto') }} placeholder="Type any text" className="h-7 w-64" aria-label="Preview text" dir={rtl ? 'rtl' : 'auto'} />
-          <Select value={testScript === 'auto' ? '' : testScript} onChange={e => { const v = e.target.value; setTestScript(v || 'auto'); const sm = scriptOf(v)?.sample; if (sm) setText(sm) }}
-            className="h-7 w-40" aria-label="Sample text" title="Fills the box with a sample in that writing system and sets the text the way that writing system is set (Arabic joins and runs right to left)">
-            <option value="">Sample text…</option>
-            {SCRIPTS.filter(sc => sc.sample).map(sc => <option key={sc.tag} value={sc.tag}>{sc.name}</option>)}
-          </Select>
-          <span className="text-muted-foreground">Your font set as it will be typed, with the swaps switched on above. Type anything, or pick a sample.</span>
-          {dirty && <span className="ml-auto text-muted-foreground">Uses the applied features</span>}
-        </div>
-        <div className="relative h-36"><canvas ref={ref} className="absolute inset-0 size-full" /></div>
-      </div>
     </div>
   )
 }

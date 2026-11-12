@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { getSettings } from './settings'
 import { featureTags, ON_BY_DEFAULT } from './features'
-import { literalChunks } from './shapedText'
+import { CHUNK, dirOf, isComplex, isRtl, literalChunks, type Dir } from './shapedText'
+import { SCRIPTS } from './scripts'
 import { Switch } from '@/components/ui/switch'
 import { ColorPicker } from './ColorPicker'
 import { KernGroupsPanel } from './KernGroupsPanel'
@@ -113,19 +114,24 @@ const POSITIONING = new Set(['kern', 'mark', 'mkmk', 'dist', 'curs', 'abvm', 'bl
 
 /** Characters, plus Glyphs-style "/glyphname" (ends at space or the next slash).
  *  `shaped`: what the font's features make of a plain stretch of text (ligatures, small capitals ...), when that is switched on. */
-function parse(text: string, font: FontInfo, variants?: Map<number, string[]>, shaped?: Map<string, string[]>): { run: string[]; breaks: Set<number> } {
+function parse(text: string, font: FontInfo, variants?: Map<number, string[]>, shaped?: Map<string, string[]>, shapeAll = false): { run: string[]; breaks: Set<number> } {
   const byCp = new Map(font.glyphs.filter(g => g.unicode >= 0).map(g => [g.unicode, g.name]))
   const names = new Set(font.glyphs.map(g => g.name))
   const out: string[] = [], breaks = new Set<number>()  // breaks: indices of glyphs that start a new paragraph line
-  let lit = ''  // the plain characters since the last glyph name or line break
+  let lit = '', litDir: Dir | null = null  // the plain characters since the last glyph name, line break or change of direction
   const flush = () => {
-    const swapped = lit && shaped?.get(lit)
+    // what the shaper made of it: always for scripts that cannot be set one glyph per character (Arabic, Hebrew, Indic ...), with Features on for the rest
+    const swapped = lit && (shapeAll || [...lit].some(isComplex)) ? shaped?.get(lit) : undefined
     if (swapped) out.push(...swapped)
-    else for (const ch of lit) {
-      const cp = ch.codePointAt(0)!, n = byCp.get(cp)
-      if (n) { out.push(n); if (variants) out.push(...(variants.get(cp) ?? [])) }
+    else {
+      const chars = [...lit]
+      if (chars.some(isRtl)) chars.reverse()  // right to left: the last letter sits leftmost
+      for (const ch of chars) {
+        const cp = ch.codePointAt(0)!, n = byCp.get(cp)
+        if (n) { out.push(n); if (variants) out.push(...(variants.get(cp) ?? [])) }
+      }
     }
-    lit = ''
+    lit = ''; litDir = null
   }
   for (let i = 0; i < text.length;) {
     if (text[i] === '\n') { flush(); if (out.length) breaks.add(out.length); i++; continue }
@@ -134,8 +140,14 @@ function parse(text: string, font: FontInfo, variants?: Map<number, string[]>, s
       if (m && names.has(m[1])) { flush(); out.push(m[1]); i += m[0].length; continue }
     }
     const ch = String.fromCodePoint(text.codePointAt(i)!)
+    const d = dirOf(ch)
+    if (d !== 'neutral') { if (litDir && d !== litDir) flush(); litDir = d }
     lit += ch
     i += ch.length
+    if (lit.length >= CHUNK) {  // long text, cut where literalChunks cuts it
+      const cut = lit.lastIndexOf(' ')
+      if (cut > 0) { const tail = lit.slice(cut + 1), keep: Dir | null = litDir; lit = lit.slice(0, cut + 1); flush(); lit = tail; litDir = keep } else flush()
+    }
   }
   flush()
   return { run: out, breaks }
@@ -239,9 +251,20 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const [featTags, setFeatTags] = useState<string[]>([])
   const [shaped, setShaped] = useState<Map<string, string[]>>(() => new Map())
   const glyphNames = useMemo(() => new Set(font.glyphs.map(g => g.name)), [font])
-  const chunks = useMemo(() => (featOn ? [...new Set(literalChunks(text, glyphNames))] : []), [featOn, text, glyphNames])
+  const chunks = useMemo(() => [...new Set(literalChunks(text, glyphNames, !featOn))], [featOn, text, glyphNames])  // with Features off: only what cannot be set without the shaper
   // glyphs made for features, or with no character of their own: placed in the text by name
   const altGlyphs = useMemo(() => font.glyphs.map(g => g.name).filter(n => n !== '.notdef' && !n.startsWith('.') && /.[._]/.test(n)).slice(0, 200), [font])
+  // The Features page sends an example: its text, with Features on and the swaps of that row switched on
+  useEffect(() => {
+    const f = (e: Event) => {
+      const d = (e as CustomEvent<{ text: string; on: string[] }>).detail
+      setText(d.text)
+      keep('features', true); setFeatOn(true)
+      setFeatChoice(c => { const next = { ...c, ...Object.fromEntries(d.on.map(t => [t, true])) }; keep('featChoice', next); return next })
+    }
+    window.addEventListener('forge:spacing-example', f)
+    return () => window.removeEventListener('forge:spacing-example', f)
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
   const featOnFor = (t: string) => featChoice[t] ?? ON_BY_DEFAULT.has(t)
   const featKey = featTags.map(t => t + (featOnFor(t) ? 1 : 0)).join()
   useEffect(() => {
@@ -265,7 +288,7 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
     return () => { stale = true; clearTimeout(id) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chunks, featKey, font])
-  const { run, breaks } = useMemo(() => parse(text, font, variantsOn && hasVariants ? variantsOf : undefined, featOn ? shaped : undefined), [text, font, variantsOn, hasVariants, variantsOf, featOn, shaped])
+  const { run, breaks } = useMemo(() => parse(text, font, variantsOn && hasVariants ? variantsOf : undefined, shaped, featOn), [text, font, variantsOn, hasVariants, variantsOf, featOn, shaped])
   const editable = !loc && !blending
   const current = run[cursor]
 
@@ -805,6 +828,12 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
             </span>
           ))}
           <Button size="xs" variant="secondary" disabled={!text.trim() || texts.includes(text)} onClick={() => saveTexts([...texts, text])}>Save the current text</Button>
+          <p className="pt-2 text-muted-foreground">A sample in a writing system. Arabic, Hebrew and the Indic scripts are set the way they are written (joined, right to left).</p>
+          <div className="flex flex-wrap gap-1">
+            {SCRIPTS.filter(sc => sc.sample).map(sc => (
+              <Button key={sc.tag} size="xs" variant="outline" title={sc.sample} onClick={() => setText(sc.sample)}>{sc.name.split(' (')[0]}</Button>
+            ))}
+          </div>
         </Pop>
         <Pop label="Features" active={featOn} width="w-72">
           <p className="text-muted-foreground">Show the text the way the font will set it: ligatures join, small capitals and other alternates swap in. Kerning and spacing stay yours to edit here.</p>
