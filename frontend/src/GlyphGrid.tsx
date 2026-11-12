@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, X } from 'lucide-react'
+import { Popover } from 'radix-ui'
 import { api, bench, outlines, type FontInfo, type Location } from './api'
 import { theme, useCanvas, useOutlineVersion } from './canvas'
 import { getClip, setClip, type GlyphData } from './clip'
@@ -7,6 +9,9 @@ import { toast } from 'sonner'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { useCommands } from './commands'
 import { useSettings } from './settings'
+import { GRID_SCRIPTS, loadScripts, rangesFor, saveScripts, scriptsInFont, shortName, slotCount } from './gridScripts'
+import { scriptName } from './scripts'
+import { ScriptPicker } from './ScriptPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -30,19 +35,10 @@ function catOf(cp: number): Cat | null {
   return null
 }
 
-type Mode = 'font' | 'latin' | 'unicode'
+type Mode = 'font' | 'scripts' | 'unicode'
 /** A grid cell: a glyph in the font, or an empty Unicode slot (name null). */
 type Slot = { name: string | null; unicode: number }
 
-const LATIN: [number, number][] = [
-  [0x20, 0x7e],     // Basic Latin
-  [0xa0, 0xff],     // Latin-1 Supplement
-  [0x100, 0x17f],   // Latin Extended-A
-  [0x180, 0x24f],   // Latin Extended-B
-  [0x1e00, 0x1eff], // Latin Extended Additional
-  [0x2000, 0x206f], // General Punctuation
-  [0x20a0, 0x20bf], // Currency Symbols
-]
 // The Basic Multilingual Plane minus controls and surrogates.
 const BMP: [number, number][] = [[0x20, 0x7e], [0xa0, 0xd7ff], [0xe000, 0xfffd]]
 
@@ -60,11 +56,11 @@ function matcher(q: string, nameCp = -1): (g: Slot) => boolean {
   return g => (cp >= 0 && g.unicode === cp) || (nameCp >= 0 && g.unicode === nameCp) || (g.name ?? '').toLowerCase().includes(lower)
 }
 
-function slots(font: FontInfo, mode: Mode): Slot[] {
+function slots(font: FontInfo, mode: Mode, scriptTags: string): Slot[] {
   if (mode === 'font') return font.glyphs
   const byCp = new Map(font.glyphs.filter(g => g.unicode >= 0).map(g => [g.unicode, g.name]))
   const out: Slot[] = []
-  for (const [a, b] of mode === 'latin' ? LATIN : BMP)
+  for (const [a, b] of mode === 'scripts' ? rangesFor(scriptTags ? scriptTags.split(',') : []) : BMP)
     for (let cp = a; cp <= b; cp++) out.push({ name: byCp.get(cp) ?? null, unicode: cp })
   if (mode === 'unicode') {  // plus whatever the font has outside the BMP or unencoded
     const seen = new Set(out.map(s => s.unicode))
@@ -116,7 +112,17 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
   const copyMasters = (source: string, targets: string[], n: string) =>
     masterOps?.copy(source, targets, [n]).then(() => onChanged?.()).catch(fail)
   const [query, setQuery] = useState('')
-  const [mode, setMode] = useState<Mode>(() => (localStorage.getItem('forge.grid') as Mode) ?? 'font')
+  const [mode, setMode] = useState<Mode>(() => {
+    const m = localStorage.getItem('forge.grid')
+    return m === 'latin' ? 'scripts' : m === 'font' || m === 'scripts' || m === 'unicode' ? m : 'font'  // 'latin' is what the Scripts view used to be called
+  })
+  // the scripts whose slots show: the ones picked for this family, plus any the font already has glyphs in
+  const [picked, setPicked] = useState<{ family: string; tags: string[] } | null>(null)
+  const defaults = useSettings().scripts
+  const chosen = picked && picked.family === font.familyname ? picked.tags : loadScripts(font.familyname, defaults)
+  const inFont = useMemo(() => scriptsInFont(font.glyphs), [font.glyphs])
+  const active = GRID_SCRIPTS.map(s => s.tag).filter(t => chosen.includes(t) || inFont.includes(t))
+  const setChosen = (tags: string[]) => { saveScripts(font.familyname, tags); setPicked({ family: font.familyname, tags }) }
   const [empty, setEmpty] = useState<number | null>(null)  // selected empty slot
   const [scroll, setScroll] = useState(0)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -134,7 +140,8 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
     }, 200)
     return () => { stale = true; clearTimeout(id) }
   }, [query])
-  const all = useMemo(() => slots(font, mode), [font, mode])
+  const activeKey = active.join()
+  const all = useMemo(() => slots(font, mode, activeKey), [font, mode, activeKey])
   const [cat, setCat] = useState<Cat>(() => (localStorage.getItem('forge.gridCat') as Cat) ?? 'all')
   useEffect(() => { localStorage.setItem('forge.gridCat', cat) }, [cat])
   const list = useMemo(() => all.filter(matcher(query, nameCp)).filter(g => cat === 'all' || catOf(g.unicode) === cat), [all, query, nameCp, cat])
@@ -282,10 +289,33 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
         <Tabs value={mode} onValueChange={v => setMode(v as Mode)}>
           <TabsList className="h-7 w-full">
             <TabsTrigger value="font" className="text-xs" title="Only glyphs the font has">Font</TabsTrigger>
-            <TabsTrigger value="latin" className="text-xs" title="Latin, punctuation and currency slots, empty ones included">Latin</TabsTrigger>
+            <TabsTrigger value="scripts" className="text-xs" title="The slots of the OpenType scripts you pick (latn, hani, arab, hebr ...), empty ones included">Scripts</TabsTrigger>
             <TabsTrigger value="unicode" className="text-xs" title="Every Basic Multilingual Plane slot, empty ones included">Unicode</TabsTrigger>
           </TabsList>
         </Tabs>
+        {mode === 'scripts' && (
+          <div className="flex flex-wrap items-center gap-1">
+            {active.map(t => (
+              <span key={t} title={`${scriptName(t)} · OpenType script ${t} · ${slotCount(t).toLocaleString()} slots`}
+                className="flex items-center gap-0.5 rounded border bg-muted/40 py-0.5 pl-1.5 pr-0.5 text-[11px]">
+                {shortName(t)} <span className="font-mono text-[10px] text-muted-foreground">{t}</span>
+                {inFont.includes(t)
+                  ? <span className="px-0.5 text-muted-foreground" title="The font has glyphs in this script">•</span>
+                  : <button type="button" aria-label={`Hide ${shortName(t)}`} className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      onClick={() => setChosen(chosen.filter(x => x !== t))}><X className="size-3" /></button>}
+              </span>
+            ))}
+            <Popover.Root>
+              <Popover.Trigger asChild><Button size="xs" variant="outline"><Plus />Script</Button></Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content align="start" sideOffset={6} className="z-50 w-80 space-y-2 rounded-lg border bg-popover p-3 text-xs text-popover-foreground shadow-md">
+                  <p className="text-muted-foreground">Which OpenType scripts' slots to show. Any mix is fine, Latin or not: add one whenever the project grows into it. The slots are empty until you draw them.</p>
+                  <ScriptPicker value={chosen} onChange={setChosen} locked={inFont} />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          </div>
+        )}
         <div className="flex flex-wrap gap-1">
           {CATS.map(([k, label, hint]) => (
             <Button key={k} size="xs" variant={cat === k ? 'secondary' : 'ghost'} title={hint} onClick={() => setCat(k)}>{label}</Button>

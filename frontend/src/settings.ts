@@ -16,10 +16,11 @@ export type Settings = {
   snapToGrid: boolean      // also snap points to grid steps when smart guides are active
   reopenLast: boolean      // open the most recent font on start
   autosave: boolean        // save .sfd projects in place a few seconds after a change
+  scripts: string[]        // OpenType script tags whose slots a new font starts with in the glyph grid
 }
 
 export const DEFAULTS: Settings = {
-  theme: 'dark', custom: { bg: '#1b2030', accent: '#7aa2f7' }, uiScale: 100, uiFont: 'default', nudge: 1, nudgeBig: 10, gridCell: 64, gridStyle: 'dots', snapToGrid: false, reopenLast: false, autosave: true,
+  theme: 'dark', custom: { bg: '#1b2030', accent: '#7aa2f7' }, uiScale: 100, uiFont: 'default', nudge: 1, nudgeBig: 10, gridCell: 64, gridStyle: 'dots', snapToGrid: false, reopenLast: false, autosave: true, scripts: ['latn'],
 }
 
 const KEY = 'forge.settings'

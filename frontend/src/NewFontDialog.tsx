@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { saveScripts } from './gridScripts'
+import { ScriptPicker } from './ScriptPicker'
+import { getSettings } from './settings'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -15,6 +18,7 @@ export function NewFontDialog({ open, onOpenChange, onCreate }: {
   const [style, setStyle] = useState('Regular')
   const [em, setEm] = useState(1000)
   const [quadratic, setQuadratic] = useState(false)
+  const [scripts, setScripts] = useState<string[]>(() => getSettings().scripts)
   const ok = family.trim().length > 0 && em >= 16 && em <= 16384
 
   return (
@@ -22,9 +26,9 @@ export function NewFontDialog({ open, onOpenChange, onCreate }: {
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>New font</DialogTitle>
-          <DialogDescription>Starts with .notdef and space. Add letters from the grid's Latin view.</DialogDescription>
+          <DialogDescription>Starts with .notdef and space. The grid's Scripts view shows the slots of the scripts you pick here; add more any time.</DialogDescription>
         </DialogHeader>
-        <form className="grid gap-3" onSubmit={e => { e.preventDefault(); if (ok) onCreate({ family: family.trim(), style: style.trim() || 'Regular', em, quadratic }) }}>
+        <form className="grid gap-3" onSubmit={e => { e.preventDefault(); if (ok) { saveScripts(family.trim(), scripts); onCreate({ family: family.trim(), style: style.trim() || 'Regular', em, quadratic }) } }}>
           <div className="grid gap-1.5">
             <Label htmlFor="nf-family">Family name</Label>
             <Input id="nf-family" autoFocus value={family} onChange={e => setFamily(e.target.value)} placeholder="My Sans" />
@@ -51,6 +55,11 @@ export function NewFontDialog({ open, onOpenChange, onCreate }: {
                 <TabsTrigger value="q" className="text-xs">Quadratic (TrueType)</TabsTrigger>
               </TabsList>
             </Tabs>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Scripts</Label>
+            <div className="max-h-36 overflow-y-auto rounded-md border p-1"><ScriptPicker value={scripts} onChange={setScripts} /></div>
+            <span className="text-xs text-muted-foreground">OpenType script tags. The default is set in Settings (Ctrl ,).</span>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
