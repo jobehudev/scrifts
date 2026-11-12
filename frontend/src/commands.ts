@@ -11,7 +11,7 @@ export type Command =
   | 'union' | 'subtract' | 'intersect' | 'mergeAll' | 'fixDirection'
   | 'addExtrema' | 'simplify' | 'roundCoords' | 'addInflections' | 'balance' | 'harmonize' | 'bolder' | 'lighter' | 'cleanUp' | 'clearGlyph' | 'build' | 'draftLigature' | 'import'
   | 'fit' | 'zoomIn' | 'zoomOut' | 'toggleGrid' | 'toggleRulers' | 'toggleSmart' | 'toggleGuides' | 'toggleShadow'
-  | 'tool:select' | 'tool:pen' | 'tool:rect' | 'tool:oval' | 'tool:shaper' | 'tool:hand' | 'tool:zoom' | 'tool:measure'
+  | 'tool:object' | 'tool:select' | 'tool:pen' | 'tool:rect' | 'tool:oval' | 'tool:shaper' | 'tool:hand' | 'tool:zoom' | 'tool:measure'
   | 'grid:font' | 'grid:latin' | 'grid:unicode'
 
 export const command = (c: Command) => window.dispatchEvent(new CustomEvent<Command>('forge:cmd', { detail: c }))

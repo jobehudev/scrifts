@@ -112,7 +112,7 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
   add('View', 'Toggle Grid', () => command('toggleGrid'), { on: editing, hint: "Ctrl '" })
   add('View', 'Toggle Rulers', () => command('toggleRulers'), { on: editing, hint: 'Ctrl R' })
   add('View', comparing ? `Stop Comparing with ${comparing}` : 'Compare with Another Font…', onCompare, { on: !off })
-  for (const [t, l, k] of [['select', 'Select', 'V'], ['pen', 'Pen', 'P'], ['rect', 'Rectangle', 'M'], ['oval', 'Oval', 'L'], ['shaper', 'Shape Builder', 'Shift M'], ['hand', 'Hand', 'H'], ['zoom', 'Zoom', 'Z'], ['measure', 'Measure', 'K']] as const) {
+  for (const [t, l, k] of [['object', 'Selection', 'V'], ['select', 'Direct Selection', 'A'], ['pen', 'Pen', 'P'], ['rect', 'Rectangle', 'M'], ['oval', 'Oval', 'L'], ['shaper', 'Shape Builder', 'Shift M'], ['hand', 'Hand', 'H'], ['zoom', 'Zoom', 'Z'], ['measure', 'Measure', 'K']] as const) {
     add('Glyph', `Tool: ${l}`, () => command(`tool:${t}`), { on: editing, hint: k })
   }
   add('Glyph', 'Round Corners', () => command('roundCorners'), { on: editing, keywords: 'radius fillet live corners smooth' })
@@ -242,7 +242,7 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
             <MenubarSub>
               <MenubarSubTrigger disabled={!editing}>Tool</MenubarSubTrigger>
               <MenubarSubContent>
-                {([['select', 'Select', 'V'], ['pen', 'Pen', 'P'], ['rect', 'Rectangle', 'M'], ['oval', 'Oval', 'L'], ['shaper', 'Shape Builder', 'Shift M'], ['hand', 'Hand', 'H'], ['zoom', 'Zoom', 'Z'], ['measure', 'Measure', 'K']] as const).map(([t, l, k]) => (
+                {([['object', 'Selection', 'V'], ['select', 'Direct Selection', 'A'], ['pen', 'Pen', 'P'], ['rect', 'Rectangle', 'M'], ['oval', 'Oval', 'L'], ['shaper', 'Shape Builder', 'Shift M'], ['hand', 'Hand', 'H'], ['zoom', 'Zoom', 'Z'], ['measure', 'Measure', 'K']] as const).map(([t, l, k]) => (
                   <MenubarItem key={t} onSelect={() => command(`tool:${t}`)}>{l}<MenubarShortcut>{k}</MenubarShortcut></MenubarItem>
                 ))}
               </MenubarSubContent>

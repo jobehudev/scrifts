@@ -372,11 +372,11 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
                 <div className="flex shrink-0 items-center gap-2">
                   {have.length > 0 && (
                     <>
-                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">Preview
-                        <Switch checked={have.every(isOn)} label={`Show ${k.title} in the preview`}
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">In preview
+                        <Switch checked={have.every(isOn)} label={`Show ${k.title} in the live preview`}
                           onCheckedChange={on => setToggles(s => ({ ...s, ...Object.fromEntries(have.map(t => [t, on])) }))} />
                       </label>
-                      <Button size="xs" variant="ghost" onClick={() => tryIt(k, have)} title={`Type "${k.sample}" in the preview and switch it on`}>Try it</Button>
+                      <Button size="xs" variant="ghost" onClick={() => tryIt(k, have)} title={`Types "${k.sample}" in the live preview below and switches this on`}>Show example</Button>
                     </>
                   )}
                   {more === 0 && k.id === 'liga' && ligaItems.length > 0 && (
@@ -486,14 +486,15 @@ export function FeaturesView({ font, onChanged, onOpenGlyph }: { font: FontInfo;
 
       <div className="border-t">
         <div className="flex flex-wrap items-center gap-2 p-2 text-xs">
-          <span className="font-medium">Try it</span>
-          <Input value={text} onChange={e => setText(e.target.value)} className="h-7 w-64" aria-label="Preview text" dir={rtl ? 'rtl' : 'auto'} />
-          <Select value={testScript} onChange={e => { const v = e.target.value; setTestScript(v); const sm = scriptOf(v)?.sample; if (sm) setText(sm) }}
-            className="h-7 w-44" aria-label="Preview script" title="Type any text. Pick a script to try its sample text, shaped as that script (Arabic joins and runs right to left)">
-            <option value="auto">Script: guess from text</option>
+          <span className="font-medium">Live preview</span>
+          <Input value={text} onChange={e => { setText(e.target.value); setTestScript('auto') }} placeholder="Type any text" className="h-7 w-64" aria-label="Preview text" dir={rtl ? 'rtl' : 'auto'} />
+          <Select value={testScript === 'auto' ? '' : testScript} onChange={e => { const v = e.target.value; setTestScript(v || 'auto'); const sm = scriptOf(v)?.sample; if (sm) setText(sm) }}
+            className="h-7 w-40" aria-label="Sample text" title="Fills the box with a sample in that writing system and sets the text the way that writing system is set (Arabic joins and runs right to left)">
+            <option value="">Sample text…</option>
             {SCRIPTS.filter(sc => sc.sample).map(sc => <option key={sc.tag} value={sc.tag}>{sc.name}</option>)}
           </Select>
-          {dirty && <span className="ml-auto text-muted-foreground">Preview shows the applied features</span>}
+          <span className="text-muted-foreground">Your font set as it will be typed, with the swaps switched on above. Type anything, or pick a sample.</span>
+          {dirty && <span className="ml-auto text-muted-foreground">Uses the applied features</span>}
         </div>
         <div className="relative h-36"><canvas ref={ref} className="absolute inset-0 size-full" /></div>
       </div>

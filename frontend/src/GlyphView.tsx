@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-type Tool = 'select' | 'pen' | 'rect' | 'oval' | 'shaper' | 'hand' | 'zoom' | 'measure'
+type Tool = 'object' | 'select' | 'pen' | 'rect' | 'oval' | 'shaper' | 'hand' | 'zoom' | 'measure'
 type View = { z: number; tx: number; ty: number }  // applied on top of fit-to-window
 type Pt = { x: number; y: number }                 // font units
 type Anchor = Pt & { out?: Pt; in?: Pt }           // pen tool: point with optional handles
@@ -64,8 +64,9 @@ const key = (ci: number, pi: number) => `${ci}:${pi}`
 const unkey = (k: string) => k.split(':').map(Number) as [number, number]
 const SMOOTH = new Set([1, 2])  // fontforge.splineCurve, splineHVCurve
 
-const TOOLS: { id: Tool; icon: typeof Hand; label: string; key: string }[] = [
-  { id: 'select', icon: MousePointer2, label: 'Select: click or box-select, drag to move. Alt-drag a handle breaks it from its twin. Drag a guide to move it; drag out of a ruler for a new one, back into it to delete', key: 'V' },
+const TOOLS: { id: Tool; icon: typeof Hand; label: string; key: string; solid?: boolean }[] = [
+  { id: 'object', icon: MousePointer2, solid: true, label: 'Selection: click anywhere on a shape to select all of it, drag to move it, box-select to pick several (Shift adds). Selected shapes get a box to scale and rotate. A picks single points instead', key: 'V' },
+  { id: 'select', icon: MousePointer2, label: 'Direct Selection: click or box-select points, drag to move. Alt-drag a handle breaks it from its twin. Drag a guide to move it; drag out of a ruler for a new one, back into it to delete', key: 'A' },
   { id: 'pen', icon: PenTool, label: 'Pen: click for a corner, drag for a curve, click the first point to close. Enter ends an open path. Click on an existing outline to add a point there (Ctrl: start a new path instead). Switch to Stroke in the bar to draw paths with a width', key: 'P' },
   { id: 'rect', icon: Square, label: 'Rectangle: drag a corner to the other. Shift makes a square, Alt draws from the middle', key: 'M' },
   { id: 'oval', icon: Circle, label: 'Oval: drag across its box. Shift makes a circle, Alt draws from the middle', key: 'L' },
@@ -131,7 +132,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   onEdited?: () => void
 }) {
   const [fetchedPts, setFetchedPts] = useState<Points | null>(null)
-  const [tool, setTool] = useState<Tool>('select')
+  const [tool, setTool] = useState<Tool>('object')
   const [space, setSpace] = useState(false)
   const [view, setView] = useState<View>(FIT)
   const [measure, setMeasure] = useState<{ a: Pt; b: Pt } | null>(null)
@@ -236,7 +237,10 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   }, [glyphInfo, font])
   const shadowName = shadowPick ?? autoShadow
   const shadow = shadowName && shadowName !== name ? outlines.want(shadowName, loc) : undefined
-  const active: Tool = space ? 'hand' : !atDefault && (tool === 'select' || tool === 'pen' || tool === 'rect' || tool === 'oval' || tool === 'shaper') ? 'hand' : tool
+  // Selection (whole shapes) and Direct Selection (points) share the selecting behaviours: guides, rulers, corner widgets, the transform box
+  const active: Tool = space ? 'hand' : !atDefault && (tool === 'object' || tool === 'select' || tool === 'pen' || tool === 'rect' || tool === 'oval' || tool === 'shaper') ? 'hand' : tool
+
+  const picking = active === 'object' || active === 'select'
 
   /** Selected points plus the handles that travel with selected on-curve points. */
   const moving = useMemo(() => {
@@ -859,7 +863,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
         if (on) { ctx.strokeStyle = t.ink; ctx.lineWidth = 1; ctx.stroke() }
       }))
 
-      if (selBounds && active === 'select') {
+      if (selBounds && picking) {
         drawTransformBox(ctx, selBounds, X, Y, t.start, t.card)
       }
     }
@@ -1120,7 +1124,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   }
   // Live corners: a round widget on each selected corner between two straight edges; drag it inward to round, as in Illustrator
   const WIDGET_PX = 12
-  const cornerWidgets = active === 'select' && editable && atDefault && pts && !cornerDlg && (!drag || drag.kind === 'corner')
+  const cornerWidgets = picking && editable && atDefault && pts && !cornerDlg && (!drag || drag.kind === 'corner')
     ? [...sel].flatMap(k => {
       const [ci, pi] = unkey(k)
       const c = pts.contours[ci]
@@ -1199,7 +1203,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if (active === 'zoom') { zoomAt(sx, sy, e.altKey ? 0.5 : 2); return }
     const p = toFont(e)
     if (active === 'measure') { const a = snap(p); setDrag({ kind: 'measure', a }); setMeasure({ a, b: a }); return }
-    if (active === 'select') {
+    if (picking) {
       const r = rulerAt(sx, sy)
       if (r) { setDrag({ kind: 'guide', axis: r, i: (r === 'y' ? guides : vguides).length, v: Math.round(r === 'y' ? p.y : p.x), out: false }); return }  // drag out of a ruler: a new guide
       const g = vis.guides ? guideAt(sx, sy) : null
@@ -1217,7 +1221,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     }
     if (active === 'shaper') { setDrag({ kind: 'shaper', pts: [p], alt: e.altKey }); return }
     if (active === 'rect' || active === 'oval') { const q = e.ctrlKey ? p : smartSnap(p, { exclude: new Set() }).pt; setDrag({ kind: 'shape', a: q, b: q, square: e.shiftKey, center: e.altKey }); return }
-    const cw = active === 'select' ? widgetAt(p) : undefined
+    const cw = picking ? widgetAt(p) : undefined
     if (cw) {
       if (e.altKey) {  // Alt-click cycles the corner type, as in Illustrator
         const order: CornerKind[] = ['round', 'inverted', 'chamfer']
@@ -1255,6 +1259,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     }
     const edge = !h && o ? nearEdge(sx) : null
     if (edge) { setDrag({ kind: 'bearing', side: edge, sx, dx: 0 }); return }
+    if (h && active === 'object') { grabShape(h[0], p, e); return }
     if (h) {
       const k = key(...h)
       if (e.shiftKey) {
@@ -1269,6 +1274,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     const segHit = hitSegment(pts.contours, pts.shapes.map(sh => sh.closed), hidden, locked, p, HIT_PX / xf.current.s, font.quadratic)
     if (segHit) {
       const { ci, seg, t } = segHit
+      if (active === 'object') { grabShape(ci, p, e); return }
       if (e.altKey) {
         const newPts = subdivideContourSegment(pts.contours[ci], seg, t)
         edit('set_contour', { contour: ci, points: newPts, closed: pts.shapes[ci]?.closed ?? true })
@@ -1286,7 +1292,23 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       }
       return
     }
+    if (active === 'object') {
+      const ci = contourAt(p)
+      if (ci >= 0) { grabShape(ci, p, e); return }
+    }
     setDrag({ kind: 'marquee', a: p, b: p, add: e.shiftKey })
+  }
+
+  /** Selection tool: take the whole of shape `ci` (Shift adds or removes it), and start moving it. */
+  const grabShape = (ci: number, p: Pt, e: React.PointerEvent | React.MouseEvent) => {
+    if (!pts) return
+    const all = pts.contours[ci].map((_, pi) => key(ci, pi))
+    if (e.shiftKey) {
+      setSel(s => { const n = new Set(s); const on = all.every(k => n.has(k)); for (const k of all) { if (on) n.delete(k); else n.add(k) } return n })
+      return
+    }
+    if (!all.every(k => sel.has(k))) setSel(new Set(all))
+    setDrag({ kind: 'move', start: p, dx: 0, dy: 0, alt: e.altKey, primary: [ci, 0] })
   }
 
   const onDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1322,13 +1344,13 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     }
     if (!drag) {
       const scr = screen(e)
-      const over = active === 'select' && vis.guides && !(pts && hit(p)) ? guideAt(scr.sx, scr.sy)?.axis ?? null : null
+      const over = picking && vis.guides && !(pts && hit(p)) ? guideAt(scr.sx, scr.sy)?.axis ?? null : null
       if (over !== overGuide) setOverGuide(over)
       if (active !== 'pen' && smartGuides.length) setSmartGuides([])
-      const e2 = active === 'select' && editable && !hit(p) ? nearEdge(screen(e).sx) : null
+      const e2 = picking && editable && !hit(p) ? nearEdge(screen(e).sx) : null
       if (e2 !== edgeHover) setEdgeHover(e2)
       let bh: 'rotate' | null = null
-      if (active === 'select' && selBounds && !hit(p)) {
+      if (picking && selBounds && !hit(p)) {
         const { s, ox, base } = xf.current
         bh = hitTransformBox(selBounds, scr.sx, scr.sy, x => ox + x * s, y => base - y * s)?.mode === 'rotate' ? 'rotate' : null
       }
@@ -1485,9 +1507,26 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       pts.contours.forEach((c, ci) => !hidden.has(ci) && !locked.has(ci) && c.forEach((q, pi) => {
         if (q[0] >= x0 && q[0] <= x1 && q[1] >= y0 && q[1] <= y1) inside.add(key(ci, pi))
       }))
+      if (active === 'object') {  // whole shapes: any shape with a point in the box
+        for (const ci of new Set([...inside].map(k => unkey(k)[0]))) pts.contours[ci].forEach((_, pi) => inside.add(key(ci, pi)))
+      }
       setSel(inside)
     }
     setDrag(null)
+  }
+
+  /** The topmost shape whose fill is under this point (font units), or -1. For the Selection tool. */
+  const pickCtx = useRef<CanvasRenderingContext2D | null>(null)
+  const contourAt = (p: Pt): number => {
+    if (!pts) return -1
+    pickCtx.current ??= document.createElement('canvas').getContext('2d')
+    const c = pickCtx.current
+    if (!c) return -1
+    for (let ci = pts.contours.length - 1; ci >= 0; ci--) {
+      if (hidden.has(ci) || locked.has(ci)) continue
+      if (c.isPointInPath(contourPath([pts.contours[ci]], [pts.shapes[ci]?.closed ?? true], font.quadratic), p.x, p.y)) return ci
+    }
+    return -1
   }
 
   const pickTool = (t: Tool) => { if (pen.length) commitPen(false); setTool(t) }
@@ -1578,7 +1617,8 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if ((k === 'delete' || k === 'backspace') && editable && selAnchor) { e.preventDefault(); deleteAnchor(selAnchor); return }
     if ((k === 'delete' || k === 'backspace') && editable) { e.preventDefault(); deleteSel(); return }
     if (k === ' ') { e.preventDefault(); setSpace(true) }
-    else if (k === 'v') pickTool('select')
+    else if (k === 'v') pickTool('object')
+    else if (k === 'a') pickTool('select')
     else if (k === 'p') pickTool('pen')
     else if (k === 'm') pickTool(e.shiftKey ? 'shaper' : 'rect')  // Illustrator: M rectangle, Shift M Shape Builder, L ellipse
     else if (k === 'l') pickTool('oval')
@@ -1625,7 +1665,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       toggleRulers: () => setVis(v => ({ ...v, rulers: !v.rulers })),
       toggleGuides: () => setVis(v => ({ ...v, guides: !v.guides })),
       toggleShadow: () => setVis(v => ({ ...v, shadow: !v.shadow })),
-      'tool:select': () => pickTool('select'), 'tool:pen': () => pickTool('pen'), 'tool:shaper': () => pickTool('shaper'), 'tool:rect': () => pickTool('rect'), 'tool:oval': () => pickTool('oval'), 'tool:hand': () => pickTool('hand'),
+      'tool:object': () => pickTool('object'), 'tool:select': () => pickTool('select'), 'tool:pen': () => pickTool('pen'), 'tool:shaper': () => pickTool('shaper'), 'tool:rect': () => pickTool('rect'), 'tool:oval': () => pickTool('oval'), 'tool:hand': () => pickTool('hand'),
       'tool:zoom': () => pickTool('zoom'), 'tool:measure': () => pickTool('measure'),
     }
     run2[c]?.()
@@ -1647,7 +1687,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   const nPts = pts?.contours.reduce((a, c) => a + c.length, 0) ?? 0
   const selShapes = new Set([...sel].map(k => unkey(k)[0]))
   const cursor = (drag?.kind === 'guide' ? drag.axis : overGuide) === 'y' ? 'cursor-ns-resize' : (drag?.kind === 'guide' ? drag.axis : overGuide) === 'x' || drag?.kind === 'bearing' || edgeHover ? 'cursor-ew-resize' : drag?.kind === 'pan' ? 'cursor-grabbing'
-    : { select: 'cursor-default', pen: 'cursor-crosshair', rect: 'cursor-crosshair', oval: 'cursor-crosshair', shaper: 'cursor-crosshair', hand: 'cursor-grab', zoom: 'cursor-zoom-in', measure: 'cursor-crosshair' }[active]
+    : { object: 'cursor-default', select: 'cursor-default', pen: 'cursor-crosshair', rect: 'cursor-crosshair', oval: 'cursor-crosshair', shaper: 'cursor-crosshair', hand: 'cursor-grab', zoom: 'cursor-zoom-in', measure: 'cursor-crosshair' }[active]
 
   const layersPanel = (docked: boolean) => (
           <LayersPanel pts={pts ?? emptyPts} quadratic={font.quadratic} selected={selShapes} editable={editable}
@@ -1734,11 +1774,11 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
           </div>
         )}
         <div className={`absolute flex flex-col gap-0.5 rounded-md border bg-card/90 p-0.5 shadow-sm backdrop-blur ${vis.rulers ? 'top-7 left-7' : 'top-2 left-2'}`}>
-          {TOOLS.map(({ id, icon: Icon, label, key: k }) => (
+          {TOOLS.map(({ id, icon: Icon, label, key: k, solid }) => (
             <Tip key={id} label={label} k={k}>
               <Button size="icon-sm" variant={active === id ? 'secondary' : 'ghost'} aria-label={label}
-                aria-pressed={active === id} disabled={(id === 'select' || id === 'pen' || id === 'rect' || id === 'oval' || id === 'shaper') && !atDefault}
-                onClick={() => pickTool(id)}><Icon /></Button>
+                aria-pressed={active === id} disabled={(id === 'object' || id === 'select' || id === 'pen' || id === 'rect' || id === 'oval' || id === 'shaper') && !atDefault}
+                onClick={() => pickTool(id)}><Icon fill={solid ? 'currentColor' : 'none'} /></Button>
             </Tip>
           ))}
           <div className="mx-1 my-0.5 h-px bg-border" />
