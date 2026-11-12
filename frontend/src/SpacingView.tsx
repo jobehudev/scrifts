@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { getSettings } from './settings'
+import { featureTags, ON_BY_DEFAULT } from './features'
+import { literalChunks } from './shapedText'
+import { Switch } from '@/components/ui/switch'
 import { ColorPicker } from './ColorPicker'
 import { KernGroupsPanel } from './KernGroupsPanel'
 import { Slider } from '@/components/ui/slider'
@@ -105,22 +108,36 @@ function BearingField({ label, num, keyText, disabled, onNumber, onKey }: {
   )
 }
 
-/** Characters, plus Glyphs-style "/glyphname" (ends at space or the next slash). */
-function parse(text: string, font: FontInfo, variants?: Map<number, string[]>): { run: string[]; breaks: Set<number> } {
+/** Positioning features: this view shows and edits kerning itself, so the shaper is told to leave these out. */
+const POSITIONING = new Set(['kern', 'mark', 'mkmk', 'dist', 'curs', 'abvm', 'blwm'])
+
+/** Characters, plus Glyphs-style "/glyphname" (ends at space or the next slash).
+ *  `shaped`: what the font's features make of a plain stretch of text (ligatures, small capitals ...), when that is switched on. */
+function parse(text: string, font: FontInfo, variants?: Map<number, string[]>, shaped?: Map<string, string[]>): { run: string[]; breaks: Set<number> } {
   const byCp = new Map(font.glyphs.filter(g => g.unicode >= 0).map(g => [g.unicode, g.name]))
   const names = new Set(font.glyphs.map(g => g.name))
   const out: string[] = [], breaks = new Set<number>()  // breaks: indices of glyphs that start a new paragraph line
+  let lit = ''  // the plain characters since the last glyph name or line break
+  const flush = () => {
+    const swapped = lit && shaped?.get(lit)
+    if (swapped) out.push(...swapped)
+    else for (const ch of lit) {
+      const cp = ch.codePointAt(0)!, n = byCp.get(cp)
+      if (n) { out.push(n); if (variants) out.push(...(variants.get(cp) ?? [])) }
+    }
+    lit = ''
+  }
   for (let i = 0; i < text.length;) {
-    if (text[i] === '\n') { if (out.length) breaks.add(out.length); i++; continue }
+    if (text[i] === '\n') { flush(); if (out.length) breaks.add(out.length); i++; continue }
     if (text[i] === '/') {
       const m = /^\/([^\s/]+) ?/.exec(text.slice(i))
-      if (m && names.has(m[1])) { out.push(m[1]); i += m[0].length; continue }
+      if (m && names.has(m[1])) { flush(); out.push(m[1]); i += m[0].length; continue }
     }
-    const cp = text.codePointAt(i)!
-    const n = byCp.get(cp)
-    if (n) { out.push(n); if (variants) out.push(...(variants.get(cp) ?? [])) }
-    i += cp > 0xffff ? 2 : 1
+    const ch = String.fromCodePoint(text.codePointAt(i)!)
+    lit += ch
+    i += ch.length
   }
+  flush()
   return { run: out, breaks }
 }
 
@@ -215,7 +232,38 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const variantsOf = useMemo(() => variantMap(font), [font])
   // lit up only when the text has a letter that has accented forms in this font
   const hasVariants = useMemo(() => [...text].some(c => variantsOf.has(c.codePointAt(0)!)), [text, variantsOf])
-  const { run, breaks } = useMemo(() => parse(text, font, variantsOn && hasVariants ? variantsOf : undefined), [text, font, variantsOn, hasVariants, variantsOf])
+  // Features: show the text the way the font sets it (ligatures join, small capitals swap in) by asking the shaper the Features page
+  // uses. Only substitutions: kerning and spacing stay as this view shows and edits them.
+  const [featOn, setFeatOn] = useState(() => stored('features', false))
+  const [featChoice, setFeatChoice] = useState<Record<string, boolean>>(() => stored('featChoice', {}))  // tag -> on/off; absent = the usual default
+  const [featTags, setFeatTags] = useState<string[]>([])
+  const [shaped, setShaped] = useState<Map<string, string[]>>(() => new Map())
+  const glyphNames = useMemo(() => new Set(font.glyphs.map(g => g.name)), [font])
+  const chunks = useMemo(() => (featOn ? [...new Set(literalChunks(text, glyphNames))] : []), [featOn, text, glyphNames])
+  const featOnFor = (t: string) => featChoice[t] ?? ON_BY_DEFAULT.has(t)
+  const featKey = featTags.map(t => t + (featOnFor(t) ? 1 : 0)).join()
+  useEffect(() => {
+    if (!featOn) return
+    let stale = false
+    api<{ code: string; gpos_features: string[] }>('/api/features')
+      .then(d => { if (!stale) setFeatTags(featureTags(d.code, d.gpos_features).filter(t => !POSITIONING.has(t))) }).catch(() => {})
+    return () => { stale = true }
+  }, [featOn, font])
+  useEffect(() => {
+    if (!chunks.length) return
+    let stale = false
+    const feats: Record<string, boolean> = { ...Object.fromEntries(featTags.map(t => [t, featOnFor(t)])), kern: false, mark: false, mkmk: false, dist: false, curs: false }
+    const id = setTimeout(async () => {
+      const next = new Map<string, string[]>()
+      for (const c of chunks) {
+        try { next.set(c, (await api<{ name: string }[]>('/api/shape', { text: c, features: feats })).map(g => g.name).filter(n => n !== '.notdef')) } catch { /* shown as typed */ }
+      }
+      if (!stale) setShaped(next)
+    }, 250)
+    return () => { stale = true; clearTimeout(id) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chunks, featKey, font])
+  const { run, breaks } = useMemo(() => parse(text, font, variantsOn && hasVariants ? variantsOf : undefined, featOn ? shaped : undefined), [text, font, variantsOn, hasVariants, variantsOf, featOn, shaped])
   const editable = !loc && !blending
   const current = run[cursor]
 
@@ -755,6 +803,23 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
             </span>
           ))}
           <Button size="xs" variant="secondary" disabled={!text.trim() || texts.includes(text)} onClick={() => saveTexts([...texts, text])}>Save the current text</Button>
+        </Pop>
+        <Pop label="Features" active={featOn} width="w-72">
+          <p className="text-muted-foreground">Show the text the way the font will set it: ligatures join, small capitals and other alternates swap in. Kerning and spacing stay yours to edit here.</p>
+          <label className="flex items-center gap-2">
+            <Switch checked={featOn} label="Apply the font's features" onCheckedChange={on => { keep('features', on); setFeatOn(on) }} />Apply the font's features
+          </label>
+          {featOn && (featTags.length === 0
+            ? <p className="text-muted-foreground">This font has no features yet. Set them up in the Features tab.</p>
+            : (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {featTags.map(t => (
+                  <button key={t} type="button" aria-pressed={featOnFor(t)} title={featOnFor(t) ? `${t} is on` : `${t} is off`}
+                    onClick={() => { const next = { ...featChoice, [t]: !featOnFor(t) }; keep('featChoice', next); setFeatChoice(next) }}
+                    className={`rounded border px-1.5 py-0.5 font-mono ${featOnFor(t) ? 'border-primary bg-primary/15 text-foreground' : 'text-muted-foreground'}`}>{t}</button>
+                ))}
+              </div>
+            ))}
         </Pop>
         <Pop label="Auto-space" active={false} width="w-64" strong>
           <p className="text-muted-foreground">FontForge spaces the letters evenly from their shapes. A good first pass: fine-tune by hand after.</p>
