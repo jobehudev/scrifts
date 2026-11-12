@@ -6,9 +6,15 @@ Scrifts is built on [FontForge](https://fontforge.org) (its engine is used throu
 [fontTools](https://github.com/fonttools/fonttools) (variable fonts). All font reading, writing and outline work is theirs;
 Scrifts is the interface. See [CREDITS.md](CREDITS.md).
 
-## Run (Windows)
+## Download
 
-Needs [FontForge for Windows](https://fontforge.org) (its bundled Python
+Get the Windows installer from the [latest release](https://github.com/jobehudev/scrifts/releases/latest) and run it.
+It installs for your user only (no admin needed) and contains everything: FontForge's engine is bundled, so there is
+nothing else to install and nothing to compile. The rest of this page is for people who want to work on Scrifts.
+
+## Development setup (Windows)
+
+Only needed to run Scrifts from source. Needs [FontForge for Windows](https://fontforge.org) (its bundled Python
 provides the `fontforge` module), Python 3.12 and Node.
 
 ```bash
@@ -24,9 +30,9 @@ cd frontend && npm install && npm run dev
 Open http://localhost:5173. Set `FORGE_FFPYTHON` if FontForge is installed
 somewhere other than `C:\Program Files\FontForgeBuilds`.
 
-## Windows installer
+## Building the installer
 
-Build it (needs FontForge for Windows installed, Rust, and the dev setup above):
+Maintainers only. Build it (needs FontForge for Windows installed, Rust, and the dev setup above):
 
 ```bash
 .venv/Scripts/python packaging/build.py
