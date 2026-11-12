@@ -1,0 +1,10 @@
+{
+  "name": "Small caps from capitals",
+  "description": "Makes a.sc, b.sc ... as scaled copies of A, B ... A starting point to refine by hand: scaling makes the strokes thinner, so thicken them afterwards. Then use Features > Generate all to wire them up as small caps.",
+  "version": "1.0",
+  "author": "Scrifts",
+  "params": [
+    { "name": "scale", "type": "number", "label": "Size compared with the capital", "default": 0.8, "min": 0.5, "max": 1 },
+    { "name": "overwrite", "type": "bool", "label": "Replace small caps that already exist", "default": false }
+  ]
+}

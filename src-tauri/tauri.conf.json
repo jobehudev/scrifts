@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Scrifts",
+  "version": "0.1.0",
+  "identifier": "app.scrifts.editor",
+  "build": {
+    "frontendDist": "splash"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Scrifts",
+        "width": 1360,
+        "height": 860,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "decorations": false,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../packaging/out/dist/forge-backend/": "forge-backend/"
+    },
+    "publisher": "Scrifts",
+    "shortDescription": "Open source font editor",
+    "license": "GPL-3.0-or-later",
+    "licenseFile": "../LICENSE",
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "headerImage": "../packaging/art/header.bmp",
+        "sidebarImage": "../packaging/art/sidebar.bmp",
+        "installerIcon": "icons/icon.ico",
+        "languages": [
+          "Dutch",
+          "English"
+        ],
+        "displayLanguageSelector": true
+      }
+    }
+  },
+  "mainBinaryName": "Scrifts"
+}

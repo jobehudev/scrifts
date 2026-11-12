@@ -1,0 +1,12 @@
+{
+  "name": "forge",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --cwd=frontend dev",
+    "build": "bun run --cwd=frontend build",
+    "lint": "bun run --cwd=frontend lint",
+    "desktop": ".venv\\Scripts\\python.exe packaging\\build.py",
+    "test":".venv/Scripts/python.exe -m pytest tests"
+  }
+}
+

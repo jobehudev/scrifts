@@ -1,0 +1,12 @@
+{
+  "name": "Copy sidebearings",
+  "description": "Gives a list of letters the same left and right spacing as a model letter (for example the sidebearings of H for E, F, K, L). A quick way to space a family of similar shapes.",
+  "version": "1.0",
+  "author": "Scrifts",
+  "params": [
+    { "name": "model", "type": "text", "label": "Model letter", "default": "H" },
+    { "name": "targets", "type": "text", "label": "Give it to (letters or names, separated by spaces)", "default": "E F K L" },
+    { "name": "left", "type": "bool", "label": "Copy the left side", "default": true },
+    { "name": "right", "type": "bool", "label": "Copy the right side", "default": true }
+  ]
+}

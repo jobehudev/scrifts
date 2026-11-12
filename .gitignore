@@ -1,0 +1,15 @@
+.venv/
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+tests/fixtures/
+bench/out/
+src-tauri/target/
+src-tauri/gen/
+Forge.exe
+WebView2Loader.dll
+
+
+packaging/out/
+packaging_build.log

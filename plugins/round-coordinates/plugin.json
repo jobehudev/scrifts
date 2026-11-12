@@ -1,0 +1,10 @@
+{
+  "name": "Round coordinates",
+  "description": "Snaps every point of the glyph (or of the whole font) to a grid, so no coordinate ends in a stray decimal. Undo works for the selected glyph.",
+  "version": "1.0",
+  "author": "Scrifts",
+  "params": [
+    { "name": "scope", "type": "choice", "label": "Work on", "options": [{ "value": "selected", "label": "The selected glyph" }, { "value": "all", "label": "Every glyph" }], "default": "selected" },
+    { "name": "step", "type": "integer", "label": "Grid step", "default": 1, "min": 1, "max": 100 }
+  ]
+}

@@ -1,0 +1,231 @@
+// Thin client for the Scrifts backend, plus the outline cache every view shares.
+
+export type GlyphInfo = { name: string; unicode: number; width: number }
+export type Axis = { tag: string; name: string; min: number; default: number; max: number }
+export type FontInfo = {
+  path: string; fontname: string; familyname: string
+  em: number; ascent: number; descent: number; xheight: number; capheight: number
+  quadratic: boolean; glyphs: GlyphInfo[]; axes: Axis[]
+  instances: { name: string; location: Record<string, number> }[]
+  /** when the file was last written (seconds), from /api/open */
+  mtime?: number
+}
+type RawPath = { d: string; refs?: { ref: string; t: number[]; d: RawPath }[] }
+export type RawOutline = RawPath & { name: string; width: number; lsb?: number; rsb?: number }
+export type Outline = { name: string; width: number; lsb: number; rsb: number; path: Path2D; uses: string[]; empty: boolean; box: [number, number, number, number] | null }
+export type Pt3 = [number, number, number, number?]  // x, y, on-curve 1/0, FontForge point type (1 = smooth)
+export type Points = RawOutline & {
+  contours: Pt3[][]; refs_list: string[]; background: string
+  shapes: { closed: boolean; cw: boolean | null; name: string }[]
+  ref_xf: number[][]
+  anchors: Anchor[]
+}
+
+/** An anchor point; `type` is base (on a letter) or mark (on an accent), among others. */
+export type Anchor = { cls: string; type: string; x: number; y: number }
+export type AnchorClass = { name: string; kind: string; subtable: string }
+
+/** A second font shown for comparison (read-only), and the page's guides. */
+export type Reference = { fid: number; info: FontInfo; store: OutlineStore }
+export type Location = Record<string, number>
+
+/** Timings for bench/: read from the page as window.__forgeBench. */
+export const bench = { start: 0, opened: 0, firstPaint: 0 }
+;(window as unknown as { __forgeBench: typeof bench }).__forgeBench = bench
+
+let inflight = new AbortController()
+
+/** The font this page shows. Every call is addressed to it, so another tab or
+ *  script opening a font can never swap what this page draws. */
+export const session = { fid: 0, onGone: null as (() => void) | null }
+
+export async function api<T>(url: string, body?: unknown): Promise<T> {
+  const fid = session.fid
+  if (fid && body === undefined) url += (url.includes('?') ? '&' : '?') + 'fid=' + fid
+  if (fid && body && typeof body === 'object' && !('fid' in body)) body = { ...body, fid }
+  // the font this call is really about: a ghost's or a reference's going away is not this page's font going away
+  const sent = body && typeof body === 'object' && 'fid' in body ? (body as { fid: unknown }).fid : fid
+  const r = await fetch(url, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: inflight.signal,
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!r.ok) {
+    if (r.status === 410 && fid && fid === session.fid && sent === fid) {
+      session.onGone?.()
+      const e = new Error('font session expired'); e.name = 'AbortError'; throw e
+    }
+    throw new Error(j.detail ?? r.statusText)
+  }
+  if (fid !== session.fid) {
+    // answer for a font this page has since replaced: drop it
+    const e = new Error('stale response'); e.name = 'AbortError'; throw e
+  }
+  return j as T
+}
+
+/** Kill the FontForge worker (the only way to stop a core op) and drop pending fetches. */
+export const lastCancel = { at: 0 }
+export async function cancelAll() {
+  lastCancel.at = Date.now()
+  inflight.abort()
+  inflight = new AbortController()
+  await fetch('/api/cancel', { method: 'POST' })
+}
+
+/** Bounding box from the path's numbers (control points included, so slightly generous); refs transformed. */
+export function rawBox(raw: { d: string; refs?: RawPath['refs'] }): [number, number, number, number] | null {
+  let b: [number, number, number, number] | null = null
+  const add = (x: number, y: number) => { b = b ? [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)] : [x, y, x, y] }
+  const n = raw.d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi)?.map(Number) ?? []
+  for (let i = 0; i + 1 < n.length; i += 2) add(n[i], n[i + 1])
+  for (const r of raw.refs ?? []) {
+    const rb = rawBox(r.d); if (!rb) continue
+    const m = new DOMMatrix(r.t)
+    for (const [x, y] of [[rb[0], rb[1]], [rb[2], rb[1]], [rb[0], rb[3]], [rb[2], rb[3]]]) add(m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f)
+  }
+  return b
+}
+
+export function toPath(raw: { d: string; refs?: RawPath['refs'] }): Path2D {
+  const p = new Path2D(raw.d)
+  for (const r of raw.refs ?? []) p.addPath(toPath(r.d), new DOMMatrix(r.t))
+  return p
+}
+
+/**
+ * Path2D from FontForge's point list, for live redraw while dragging (the
+ * core's own outline replaces it on release). Cubic: on, off, off, on.
+ * Quadratic: consecutive off-curves imply an on-curve halfway between.
+ */
+export function contourPath(contours: Pt3[][], closed: boolean[], quadratic: boolean): Path2D {
+  const path = new Path2D()
+  contours.forEach((c, ci) => {
+    const start = c.findIndex(p => p[2])
+    if (start < 0) return
+    const n = c.length
+    path.moveTo(c[start][0], c[start][1])
+    let offs: Pt3[] = []
+    const steps = closed[ci] ? n : n - start - 1
+    for (let k = 1; k <= steps; k++) {
+      const p = c[(start + k) % n]
+      if (!p[2]) { offs.push(p); continue }
+      if (!offs.length) path.lineTo(p[0], p[1])
+      else if (!quadratic && offs.length === 2) path.bezierCurveTo(offs[0][0], offs[0][1], offs[1][0], offs[1][1], p[0], p[1])
+      else offs.forEach((o, i) => {
+        const end = i === offs.length - 1 ? p : [(o[0] + offs[i + 1][0]) / 2, (o[1] + offs[i + 1][1]) / 2]
+        path.quadraticCurveTo(o[0], o[1], end[0], end[1])
+      })
+      offs = []
+    }
+    if (closed[ci]) path.closePath()
+  })
+  return path
+}
+
+const refNames = (raw: RawPath): string[] =>
+  (raw.refs ?? []).flatMap(r => [r.ref, ...refNames(r.d)])
+
+export const locKey = (loc: Location | null) =>
+  loc ? Object.keys(loc).sort().map(k => `${k}=${loc[k].toFixed(2)}`).join(',') : ''
+
+/**
+ * Outline cache keyed by (location, glyph). Views ask for what is on screen;
+ * requests made in the same tick are batched into one backend call. Entries
+ * are only replaced on edit (`put`) or dropped on a new font (`clear`).
+ */
+export class OutlineStore {
+  /** fid: a fixed font (e.g. a reference font); omitted = this page's font. */
+  fid?: number
+  constructor(fid?: number) { this.fid = fid }
+
+  private cache = new Map<string, Outline>()
+  private points = new Map<string, Points>()
+  private wanted = new Map<string, { names: Set<string>; loc: Location | null }>()
+  private pending = new Set<string>()
+  private timer = 0
+  private subs = new Set<() => void>()
+  version = 0
+
+  get(name: string, loc: Location | null) {
+    return this.cache.get(locKey(loc) + '|' + name)
+  }
+
+  getPoints(name: string) {
+    return this.points.get(name)
+  }
+
+  putPoints(p: Points, notify = true) {
+    this.points.set(p.name, p)
+    this.put(p, null, notify)
+  }
+
+  /** Returns the cached outline, scheduling a fetch if it is missing. */
+  want(name: string, loc: Location | null) {
+    const k = locKey(loc) + '|' + name
+    const hit = this.cache.get(k)
+    if (hit || this.pending.has(k)) return hit
+    this.pending.add(k)
+    const lk = locKey(loc)
+    if (!this.wanted.has(lk)) this.wanted.set(lk, { names: new Set(), loc })
+    this.wanted.get(lk)!.names.add(name)
+    if (!this.timer) this.timer = window.setTimeout(() => this.flush(), 0)
+    return undefined
+  }
+
+  private async flush() {
+    this.timer = 0
+    const batches = [...this.wanted.values()]
+    this.wanted.clear()
+    for (const { names, loc } of batches) {
+      const list = [...names]
+      try {
+        const res = await api<RawOutline[]>('/api/outlines',
+          this.fid ? { names: list, location: loc, fid: this.fid } : { names: list, location: loc })
+        for (const o of res) this.put(o, loc, false)
+        for (const n of list) this.pending.delete(locKey(loc) + '|' + n)
+        this.emit()
+      } catch {
+        for (const n of list) this.pending.delete(locKey(loc) + '|' + n)
+      }
+    }
+  }
+
+  put(o: RawOutline, loc: Location | null, notify = true) {
+    if (!loc && !('contours' in o)) this.points.delete(o.name)
+    this.cache.set(locKey(loc) + '|' + o.name, {
+      name: o.name, width: o.width, lsb: o.lsb ?? 0, rsb: o.rsb ?? 0, path: toPath(o),
+      uses: refNames(o), empty: !o.d.trim() && !o.refs?.length, box: rawBox(o),
+    })
+    if (notify) this.emit()
+  }
+
+  /** After editing `name`: forget every cached composite that draws it. */
+  invalidateUsers(name: string) {
+    for (const [k, o] of this.cache) if (o.uses.includes(name)) this.cache.delete(k)
+    for (const [n, p] of this.points) if (p.refs_list.includes(name)) this.points.delete(n)
+    this.emit()
+  }
+
+  clear() {
+    this.cache.clear()
+    this.points.clear()
+    this.pending.clear()
+    this.wanted.clear()
+    this.emit()
+  }
+
+  private emit() {
+    this.version++
+    this.subs.forEach(f => f())
+  }
+
+  subscribe = (f: () => void) => {
+    this.subs.add(f)
+    return () => { this.subs.delete(f) }
+  }
+}
+
+export const outlines = new OutlineStore()
