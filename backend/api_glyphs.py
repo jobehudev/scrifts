@@ -349,6 +349,25 @@ class AddGlyphsReq(FontReq):
     blocks: list[str]
 
 
+class NewGlyph(BaseModel):
+    name: str
+    base: str | None = None     # start as a copy of this glyph
+    scale: float = 1.0          # ... scaled by this (small capitals: 0.8)
+    width: int | None = None    # otherwise empty, this wide
+
+
+class MakeGlyphsReq(FontReq):
+    items: list[NewGlyph]
+
+
+@app.post("/api/make-glyphs")
+def make_glyphs(req: MakeGlyphsReq):
+    """Glyphs to draw for ligatures, small capitals, stylistic sets and other alternates (the Features page)."""
+    if len(req.items) > 500:
+        raise HTTPException(400, "at most 500 glyphs at once")
+    return _call("make_glyphs", fid=req.fid, items=[i.model_dump() for i in req.items])
+
+
 @app.post("/api/glyphdb/add")
 def glyphdb_add(req: AddGlyphsReq):
     """Empty glyphs for every assigned character of these blocks that the font doesn't have."""

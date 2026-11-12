@@ -3,7 +3,7 @@ import { Play } from 'lucide-react'
 import { api } from './api'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
-import { Textarea } from '@/components/ui/textarea'
+import { CodeEditor } from './CodeEditor'
 
 const EXAMPLES: Record<string, string> = {
   'Ligature from two glyphs': `# Combine f + f into an f_f ligature made of references.
@@ -67,6 +67,8 @@ export function ScriptView({ onChanged }: { onChanged: () => void }) {
   const [code, setCode] = useState(() => localStorage.getItem('forge.script') ?? EXAMPLES['Ligature from two glyphs'])
   const [out, setOut] = useState<{ output: string; error: string | null; ms: number } | null>(null)
   const [running, setRunning] = useState(false)
+  // the last 'line N' Python names in an error is, for a script run as one block, the line of the script itself
+  const errorLine = out?.error ? [...out.error.matchAll(/line (\d+)/g)].map(m => +m[1]).at(-1) ?? null : null
 
   const runScript = async () => {
     localStorage.setItem('forge.script', code)
@@ -91,25 +93,20 @@ export function ScriptView({ onChanged }: { onChanged: () => void }) {
         <span className="flex-1" />
         <Button size="sm" onClick={runScript} disabled={running}><Play />Run <Kbd>Ctrl ↵</Kbd></Button>
       </div>
-      <Textarea value={code} onChange={e => setCode(e.target.value)} spellCheck={false}
-        onKeyDown={e => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runScript() }
-          if (e.key === 'Tab') {  // indent instead of leaving the editor
-            e.preventDefault()
-            const el = e.currentTarget, a = el.selectionStart
-            setCode(c => c.slice(0, a) + '    ' + c.slice(el.selectionEnd))
-            requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = a + 4 })
-          }
-        }}
-        className="min-h-0 flex-1 resize-none rounded-none border-0 font-mono text-xs leading-relaxed focus-visible:ring-0" />
-      <div className="max-h-[40%] min-h-24 overflow-auto border-t bg-card p-2 font-mono text-[11px] whitespace-pre-wrap">
-        {!out && <span className="text-muted-foreground">
-          `font`, `fontforge` and `psMat` are predefined; print() shows here. Scripts can't be undone: Save when happy.
-        </span>}
+      <CodeEditor value={code} onChange={setCode} onRun={runScript} label="Python script" className="flex-1 rounded-none border-0 border-b" errorLine={errorLine} />
+      {/* the console: what print() wrote, one numbered line each, then how it went */}
+      <div className="max-h-[40%] min-h-24 overflow-auto bg-card py-1 font-mono text-[11px] leading-5">
+        {!out && <p className="px-3 text-muted-foreground">
+          <span className="select-none">{'>'} </span>`font`, `fontforge` and `psMat` are predefined; print() shows here. Scripts can't be undone: Save when happy.
+        </p>}
         {out && <>
-          <span className="text-muted-foreground">{out.error ? 'failed' : 'done'} in {out.ms} ms{'\n'}</span>
-          {out.output}
-          {out.error && <span className="text-destructive">{out.error}</span>}
+          <p className="px-3 text-muted-foreground"><span className="select-none">{'>'} </span>{running ? 'running' : out.error ? 'failed' : 'done'} in {out.ms} ms</p>
+          {(out.output ? out.output.replace(/\n$/, '').split('\n') : []).map((l, i) => (
+            <div key={i} className="flex whitespace-pre-wrap px-3 hover:bg-accent/30">
+              <span className="w-8 shrink-0 select-none pr-3 text-right text-muted-foreground">{i + 1}</span><span>{l}</span>
+            </div>
+          ))}
+          {out.error && <pre className="whitespace-pre-wrap px-3 text-destructive">{out.error}</pre>}
         </>}
       </div>
     </div>

@@ -11,10 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
+import { CodeEditor } from './CodeEditor'
 
 type Features = { code: string; lookups: { name: string; type: string; features: string[] }[]; gpos_features: string[] }
 type Shaped = { name: string; cluster: number; ax: number; dx: number; dy: number }[]
+type NewGlyph = { name: string; base?: string; scale?: number; width?: number }
+const ALT_SUFFIXES = ['ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'salt', 'swsh', 'onum', 'lnum', 'tnum', 'pnum', 'case', 'zero', 'sups', 'sinf', 'subs', 'hist', 'titl']
+const ALT_DEFAULT: Record<string, string> = { onum: '0123456789', lnum: '0123456789', tnum: '0123456789', pnum: '0123456789', sups: '0123456789', sinf: '0123456789', subs: '0123456789', zero: '0', case: '()[]{}-' }
 
 /** The kinds of swap a font can do, in plain words. Each one is set up from glyphs named in a convention. */
 type Kind = {
@@ -44,7 +47,7 @@ const swapsIn = (code: string, tags: string[]) => tags.reduce((n, t) => n + subs
  * makes it work (OpenType feature code, compiled by FontForge) and the scripts and languages it applies to are
  * under Advanced. The preview shapes with HarfBuzz using the font as applied.
  */
-export function FeaturesView({ font }: { font: FontInfo }) {
+export function FeaturesView({ font, onChanged }: { font: FontInfo; onChanged: () => void }) {
   const [data, setData] = useState<Features | null>(null)
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -105,6 +108,38 @@ export function FeaturesView({ font }: { font: FontInfo }) {
     setToggles(s => ({ ...s, ...Object.fromEntries(on.map(t => [t, true])) }))
   }
 
+  // glyphs to draw, made from the letters the font has: ligatures empty, small capitals as 80% copies of the capitals
+  const glyphByCp = new Map(font.glyphs.filter(g => g.unicode >= 0).map(g => [g.unicode, g]))
+  const nameOf = (ch: string) => glyphByCp.get(ch.codePointAt(0)!)?.name
+  const haveName = new Set(names)
+  const ligaItems: NewGlyph[] = ['fi', 'fl', 'ff', 'ffi', 'ffl'].flatMap(w => {
+    const parts = [...w].map(nameOf)
+    const name = parts.join('_')
+    return parts.every(Boolean) && !haveName.has(name) ? [{ name, width: parts.reduce((n, p) => n + (font.glyphs.find(g => g.name === p)?.width ?? 0), 0) }] : []
+  })
+  const smcpItems: NewGlyph[] = 'abcdefghijklmnopqrstuvwxyz'.split('').flatMap(c => {
+    const lower = nameOf(c), upper = nameOf(c.toUpperCase())
+    return lower && upper && !haveName.has(`${lower}.sc`) ? [{ name: `${lower}.sc`, base: upper, scale: 0.8 }] : []
+  })
+  const [altLetters, setAltLetters] = useState('a g y')
+  const [altSuffix, setAltSuffix] = useState('ss01')
+  const altItems: NewGlyph[] = [...altLetters.replace(/\s+/g, '')].flatMap(c => {
+    const base = nameOf(c)
+    return base && !haveName.has(`${base}.${altSuffix}`) ? [{ name: `${base}.${altSuffix}`, base }] : []
+  })
+  /** Make glyphs to draw. They are copies or empty slots: then the row finds them and offers Set it up. */
+  const make = async (items: NewGlyph[], what: string) => {
+    if (!items.length) return
+    setBusy(true)
+    try {
+      const r = await api<{ created: string[] }>('/api/make-glyphs', { items })
+      onChanged()
+      toast.success(`Made ${r.created.length} glyph${r.created.length === 1 ? '' : 's'} to draw`, {
+        description: `${r.created.slice(0, 8).join(', ')}${r.created.length > 8 ? ' ...' : ''}. ${what}`,
+      })
+    } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+  }
+
   const dirty = data !== null && code !== data.code
   const systems = languageSystems(code)
   const rtl = !!scriptOf(testScript)?.rtl
@@ -163,6 +198,21 @@ export function FeaturesView({ font }: { font: FontInfo }) {
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">{k.what}</p>
                   {have.length === 0 && more === 0 && <p className="mt-1 text-xs"><span className="text-muted-foreground">To start: </span>{k.draw}</p>}
+                  {/* the glyphs this kind needs, made for you so there is something to draw */}
+                  {more === 0 && (k.id === 'ss' || k.id === 'alt') && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground">Make copies to redraw of</span>
+                      <Input value={altLetters} onChange={e => setAltLetters(e.target.value)} className="h-7 w-32 font-mono" aria-label="Letters to make alternates of" />
+                      <span className="text-muted-foreground">as</span>
+                      <Select value={altSuffix} onChange={e => { setAltSuffix(e.target.value); if (ALT_DEFAULT[e.target.value]) setAltLetters(ALT_DEFAULT[e.target.value]) }} className="h-7 w-24 font-mono" aria-label="Alternate kind">
+                        {ALT_SUFFIXES.map(sx => <option key={sx}>{sx}</option>)}
+                      </Select>
+                      <Button size="xs" variant="outline" disabled={busy || !altItems.length} onClick={() => make(altItems, 'Redraw them, then come back and press Set it up.')}
+                        title={altItems.map(i => i.name).join(', ') || 'Nothing to make: the letters are not in the font, or the copies exist'}>
+                        <Plus />Make {altItems.length || ''}
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {have.length > 0 && (
@@ -173,6 +223,14 @@ export function FeaturesView({ font }: { font: FontInfo }) {
                       </label>
                       <Button size="xs" variant="ghost" onClick={() => tryIt(k, have)} title={`Type "${k.sample}" in the preview and switch it on`}>Try it</Button>
                     </>
+                  )}
+                  {more === 0 && k.id === 'liga' && ligaItems.length > 0 && (
+                    <Button size="xs" variant="outline" disabled={busy} onClick={() => make(ligaItems, 'Draw them, then press Set it up.')}
+                      title={`Empty glyphs as wide as their letters: ${ligaItems.map(i => i.name).join(', ')}`}><Plus />Make {ligaItems.length} to draw</Button>
+                  )}
+                  {more === 0 && k.id === 'smcp' && smcpItems.length > 0 && (
+                    <Button size="xs" variant="outline" disabled={busy} onClick={() => make(smcpItems, 'They start as the capitals at 80%: reshape them, then press Set it up.')}
+                      title="Copies of the capitals at 80% size, named a.sc, b.sc ..."><Plus />Make {smcpItems.length} from the capitals</Button>
                   )}
                   {more > 0 && (
                     <Button size="xs" variant={have.length ? 'outline' : 'default'} disabled={busy} onClick={() => setUp(k)}
@@ -242,18 +300,7 @@ export function FeaturesView({ font }: { font: FontInfo }) {
               <Button size="sm" variant="ghost" disabled={!dirty} onClick={() => { setCode(data!.code); setError(null) }}><RotateCcw />Revert</Button>
               <Button size="sm" onClick={apply} disabled={busy || !dirty}><Check />Apply <Kbd>Ctrl ↵</Kbd></Button>
             </div>
-            <Textarea value={code} onChange={e => setCode(e.target.value)} spellCheck={false}
-              aria-label="Feature code"
-              onKeyDown={e => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); if (dirty) apply() }
-                if (e.key === 'Tab') {
-                  e.preventDefault()
-                  const el = e.currentTarget, a = el.selectionStart
-                  setCode(c => c.slice(0, a) + '  ' + c.slice(el.selectionEnd))
-                  requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = a + 2 })
-                }
-              }}
-              className="h-64 resize-y rounded-md font-mono text-xs leading-relaxed" />
+            <CodeEditor value={code} onChange={setCode} onRun={() => { if (dirty) void apply() }} indent={2} label="Feature code" className="h-72 rounded-md" />
             {tags.length > 0 && (
               <div className="flex flex-wrap items-center gap-1">
                 <span className="text-muted-foreground">Switch features on and off in the preview:</span>

@@ -756,7 +756,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
                   {v === 'glyph' && <GlyphView font={font} name={sel} loc={loc} guides={guides} onGuides={setGuides} vguides={vguides} onVGuides={setVGuides} reference={reference} ghosts={ghosts} blend={blend} masterOps={masterOps} onEdited={family ? recheckSoon : undefined} />}
                   {v === 'spacing' && <SpacingView font={font} loc={loc} sel={sel} onSelect={setSel} guides={guides} reference={reference} family={family} weight={weight} location={axisVals} blendRev={blendRev} onStopPreview={() => setWeight(null)} />}
                   {v === 'accents' && <AccentView font={font} sel={sel} onSelect={setSel} onEditGlyph={n => { setSel(n); switchView('glyph') }} guides={guides} onGuides={setGuides} reference={reference} onFontChanged={refresh} />}
-                  {v === 'features' && <FeaturesView font={font} />}
+                  {v === 'features' && <FeaturesView font={font} onChanged={refresh} />}
                   {v === 'script' && <ScriptView onChanged={refresh} />}
                 </div>
   )

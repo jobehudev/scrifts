@@ -559,6 +559,29 @@ def op_create_glyph(unicode=-1, name=None):
     return _glyph_summary(g)
 
 
+def op_make_glyphs(items):
+    """New glyphs to draw, for the Features page. Each item is {name, base?, scale?, width?}: with a base it starts as a
+    copy of that glyph (scaled, e.g. a.sc from A at 0.8), otherwise empty at the given width. Names the font has are left alone."""
+    font = state.FONT
+    have = {g.glyphname for g in font.glyphs()}
+    made = []
+    for it in items:
+        name, base = it["name"], it.get("base")
+        if name in have:
+            continue
+        g = font.createChar(-1, name)
+        if base and base in have:
+            s = float(it.get("scale", 1))
+            g.addReference(base, psMat.scale(s))
+            g.unlinkRef()  # a copy to reshape, not a link to the original
+            g.width = round(font[base].width * s)
+        else:
+            g.width = int(it.get("width") or font.em // 2)
+        have.add(name)
+        made.append(name)
+    return {"created": made}
+
+
 def op_codepoints():
     """Every code point the font covers: each glyph's Unicode value and its alternate ones (a glyph can serve several)."""
     out = set()

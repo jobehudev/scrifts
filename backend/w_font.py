@@ -534,7 +534,7 @@ def op_close():
 
 FONT_WIDE = {"run_plugin": "the plugin run", "run_script": "the script run", "rename_glyph": "the rename",
              "standard_names": "the standard names", "set_features": "the feature change", "edit_group": "the kerning group change",
-             "import_artboards": "the artboard import", "create_many": "the added glyphs", "place_by_anchors": "the accent placement",
+             "import_artboards": "the artboard import", "create_many": "the added glyphs", "make_glyphs": "the new glyphs", "place_by_anchors": "the accent placement",
              "repair_stray": "the repair", "apply_metrics_keys": "the spacing update", "fix_problem": "the fix",
              "set_font_info": "the font info change", "auto_hint": "the hinting change"}
 

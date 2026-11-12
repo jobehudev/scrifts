@@ -2031,3 +2031,18 @@ def test_hinting_is_shown_cleared_autohinted_and_undone(client, tmp_path):
     assert len(r["glyph"]["v"]) >= 2 and len(r["glyph"]["h"]) >= 1  # the two stems and the bar of an H
     assert client.post("/api/undo-font", json={"fid": fid}).json()["undone"] == "the hinting change"
     assert stems()["glyph"]["v"] == []
+
+
+@pytest.mark.skipif(not SFD.exists(), reason="run tests/fetch_fixtures.sh")
+def test_make_glyphs_for_features(client):
+    """The Features page makes glyphs to draw: a scaled copy of a base, or an empty one of a given width; never over an existing name."""
+    fid = client.post("/api/open", json={"path": str(SFD)}).json()["fid"]
+    base = client.get("/api/glyph/x", params={"fid": fid}).json()
+    items = [{"name": "x.sc_test", "base": "x", "scale": 0.5}, {"name": "f_i_test", "width": 777}]
+    made = client.post("/api/make-glyphs", json={"fid": fid, "items": items}).json()
+    assert made["created"] == ["x.sc_test", "f_i_test"]
+    copy = client.get("/api/glyph/x.sc_test", params={"fid": fid}).json()
+    assert copy["contours"] and copy["width"] == round(base["width"] * 0.5)
+    assert client.get("/api/glyph/f_i_test", params={"fid": fid}).json()["width"] == 777
+    again = client.post("/api/make-glyphs", json={"fid": fid, "items": items}).json()
+    assert again["created"] == []
