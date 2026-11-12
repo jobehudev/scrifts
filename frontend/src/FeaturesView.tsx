@@ -38,7 +38,7 @@ const KINDS: Kind[] = [
   { id: 'smcp', ids: ['smcp', 'c2sc'], title: 'Small capitals', what: 'Lowercase letters shown as small capital shapes. Capitals can become small capitals too, for text typed in capitals.',
     draw: 'Draw a.sc, b.sc, c.sc ... one for each letter.', sample: 'Small Capitals NASA',
     tags: c => featureTags(c).filter(t => t === 'smcp' || t === 'c2sc'), glyphs: ns => ns.filter(n => n.endsWith('.sc')) },
-  { id: 'ss', ids: ['ss'], title: 'Stylistic sets', what: 'Alternate letter shapes that people switch on in groups, like a different g or a single-storey a.',
+  { id: 'ss', ids: ['ss'], title: 'Stylistic sets', what: 'Alternate letter shapes that people switch on in groups: a second style of a or g, for example, kept next to the usual one.',
     draw: 'Draw g.ss01, a.ss01, y.ss02 ... the number says which set.', sample: 'Quick gray fox',
     tags: c => featureTags(c).filter(t => /^ss\d\d$/.test(t)), glyphs: ns => ns.filter(n => /\.ss\d\d$/.test(n)) },
   { id: 'alt', ids: ['alt'], title: 'Figures and other alternates', what: 'Old-style or tabular numbers, swashes, case-sensitive punctuation, superscripts and more.',
