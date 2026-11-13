@@ -12,6 +12,13 @@ Get the Windows installer from the [latest release](https://github.com/jobehudev
 It installs for your user only (no admin needed) and contains everything: FontForge's engine is bundled, so there is
 nothing else to install and nothing to compile. The rest of this page is for people who want to work on Scrifts.
 
+## Make it yours
+
+![The same glyph in four looks: dark, light, light grey and green](docs/themes.png)
+
+Every colour, the interface font (including the font you are editing) and the interface size are settings, not separate
+builds. Panels can be dragged, docked and saved as workspaces.
+
 ## Development setup (Windows)
 
 Only needed to run Scrifts from source. Needs [FontForge for Windows](https://fontforge.org) (its bundled Python
