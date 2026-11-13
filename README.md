@@ -43,6 +43,14 @@ builds. Panels can be dragged, docked and saved as workspaces.
 
 ![The same glyph in four looks: dark, light, light grey and green](docs/themes.png)
 
+## About AI
+
+Scrifts is developed with AI assistance. I decide and closely moderate the architecture and infrastructure; the AI
+mostly writes the boilerplate.
+
+Scrifts does not generate fonts with AI and has no such feature: the glyphs are yours, drawn or traced by you.
+Support actual artists and designers.
+
 ## Running from source
 
 You need [FontForge for Windows](https://fontforge.org) (its bundled Python provides the `fontforge` module),
