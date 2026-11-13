@@ -986,3 +986,145 @@ def export_variable(req: VariableReq):
         raise HTTPException(400, "this font is not variable (or is no longer open)")
     TTFont(v.path).save(req.path)
     return _verify_ttf(req.path, expect_fvar=True)
+
+
+def _variation_peaks(v, axes, base):
+    """Where the font's gvar regions peak, as full user-space locations: each is a master the designer drew (a peak between the
+    default and an axis end is an in-between master). Regions are in normalised units, after avar, so undo both."""
+    font = v.font
+    if "gvar" not in font:
+        return []
+    from fontTools.varLib.models import piecewiseLinearMap
+    segs = font["avar"].segments if "avar" in font else {}
+    out = []
+    by_tag = {a["tag"]: a for a in axes}
+    seen = set()
+    for variations in font["gvar"].variations.values():
+        for var in variations:
+            key = tuple(sorted((t, tuple(r)) for t, r in var.axes.items()))
+            if key in seen:
+                continue
+            seen.add(key)
+            loc = dict(base)
+            for tag, (_lo, peak, _hi) in var.axes.items():
+                a = by_tag.get(tag)
+                if not a or peak == 0:
+                    continue
+                if tag in segs and segs[tag]:
+                    peak = piecewiseLinearMap(peak, {to: frm for frm, to in segs[tag].items()})
+                val = round(a["default"] + peak * ((a["max"] - a["default"]) if peak > 0 else (a["default"] - a["min"])), 2)
+                loc[tag] = float(round(val)) if abs(val - round(val)) < 0.05 else val  # normalised units are stored in 14 bits: 399.98 means 400
+            out.append(loc)
+    return out
+
+
+def _ordered_axes(v):
+    return sorted(v.axes, key=lambda a: a["tag"] != "wght")  # the weight axis first: the family code expects that
+
+
+def _split_plan(v):
+    """The masters a variable font splits into, as [(location, style name)]: the default, every place its gvar regions peak
+    (the in-between masters it was drawn with) and each axis end. Names come from the font's named instances when one sits there."""
+    axes = _ordered_axes(v)
+    base = {a["tag"]: a["default"] for a in axes}
+    locations = [dict(base)]
+    for loc in _variation_peaks(v, axes, base):
+        if loc not in locations:
+            locations.append(loc)
+    for a in axes:
+        for end in (a["min"], a["max"]):
+            loc = {**base, a["tag"]: end}
+            if end != a["default"] and loc not in locations:
+                locations.append(loc)
+    named = {tuple(sorted(i["location"].items())): i["name"] for i in v.instances}
+
+    def style_of(loc):
+        hit = named.get(tuple(sorted((t, loc[t]) for t in loc)))
+        if hit:
+            return hit
+        moved = [a for a in axes if loc[a["tag"]] != a["default"]]
+        return "".join(f"{a['name']}{loc[a['tag']]:g}" for a in moved).replace(" ", "") or "Regular"
+
+    out, styles = [], set()
+    for i, loc in enumerate(locations):
+        style = style_of(loc)
+        if style in styles:
+            style = f"{style}{i}"
+        styles.add(style)
+        out.append((loc, style))
+    return out
+
+
+@app.get("/api/variable/keyframes")
+def variable_keyframes(fid: int):
+    """Where the open variable font was drawn: the masters "Edit as masters" would make, each with its location."""
+    v = variables.get(fid)
+    if not v:
+        raise HTTPException(400, "this font is not variable (or is no longer open)")
+    return [{"name": style, "location": loc} for loc, style in _split_plan(v)]
+
+
+class SplitReq(FontReq):
+    path: str  # where the user chose to save: its name becomes the project folder, the family file and the masters' names
+
+
+@app.post("/api/family/split")
+def family_split(req: SplitReq):
+    """Turn the open variable font into a family you can edit: a project folder with one .sfd per master (the default, each axis
+    at its two ends, and every in-between master the font was drawn with) and a .designspace. Scrifts then blends the masters live, as for any family.
+    The axis mapping (avar) is not carried over."""
+    import shutil
+    import tempfile
+    from fontTools.designspaceLib import DesignSpaceDocument
+
+    v = variables.get(req.fid)
+    if not v:
+        raise HTTPException(400, "this font is not variable (or is no longer open)")
+    stem = os.path.basename(req.path.strip().strip('"'))
+    for ext in (".designspace", ".sfd"):
+        if stem.lower().endswith(ext):
+            stem = stem[:-len(ext)]
+    stem = "".join(c for c in stem.strip() if c not in '<>:"/\\|?*').strip(" .")
+    parent = os.path.dirname(os.path.abspath(req.path.strip().strip('"')))
+    if not stem:
+        raise HTTPException(400, "give the project a name")
+    if not os.path.isdir(parent):
+        raise HTTPException(404, f"no such folder: {parent}")
+    folder = os.path.join(parent, stem)
+    if os.path.isdir(folder) and os.listdir(folder):
+        raise HTTPException(400, f"{folder} already has files in it: pick another name")
+
+    axes = _ordered_axes(v)
+    plan = _split_plan(v)
+
+    os.makedirs(folder, exist_ok=True)
+    doc = DesignSpaceDocument()
+    for a in axes:
+        doc.addAxisDescriptor(name="Weight" if a["tag"] == "wght" else a["name"], tag=a["tag"],
+                              minimum=a["min"], default=a["default"], maximum=a["max"])
+    name_of = {a["tag"]: "Weight" if a["tag"] == "wght" else a["name"] for a in axes}
+    family_name = v.font["name"].getDebugName(16) or v.font["name"].getDebugName(1) or stem
+    made = []
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            for i, (loc, style) in enumerate(plan):
+                inst = instancer.instantiateVariableFont(TTFont(v.path), loc, updateFontNames=False)
+                ttf = os.path.join(tmp, f"{i}.ttf")
+                inst.save(ttf)
+                sfd = os.path.join(folder, f"{stem}-{style}.sfd".replace(" ", ""))
+                fid = _call("open", path=ttf)["fid"]
+                try:
+                    _call("set_font_info", fid=fid, fields={"familyname": family_name})
+                    _call("link_style", fid=fid, style=style, weight=loc.get("wght", 400))
+                    _call("save", fid=fid, path=sfd)
+                finally:
+                    _call("close", fid=fid)
+                doc.addSourceDescriptor(path=sfd, filename=os.path.basename(sfd), familyName=family_name, styleName=style,
+                                        location={name_of[t]: x for t, x in loc.items()})
+                made.append(sfd)
+        ds = os.path.join(folder, stem + ".designspace")
+        doc.write(ds)
+    except Exception:
+        shutil.rmtree(folder, ignore_errors=True)  # a half-made project: never leave it behind (the folder was empty or new)
+        raise
+    return {"designspace": ds, "default": made[0], "masters": made, "folder": folder}

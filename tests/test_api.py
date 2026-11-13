@@ -306,7 +306,11 @@ def test_new_font(client, tmp_path):
     out = tmp_path / "Mine"
     info = client.post("/api/new", json={"path": str(out), "family": "My Sans", "style": "Bold", "em": 2048}).json()
     assert info["familyname"] == "My Sans" and info["fontname"] == "MySans-Bold" and info["em"] == 2048
-    assert info["path"].endswith("Mine.sfd") and (tmp_path / "Mine.sfd").exists()
+    assert info["path"].endswith("Mine.sfd") and (tmp_path / "My Sans" / "Mine.sfd").exists()  # in a folder named after the family
+    flat = client.post("/api/new", json={"path": str(tmp_path / "Flat"), "family": "Flat", "own_folder": False}).json()
+    assert (tmp_path / "Flat.sfd").exists() and flat["path"].endswith("Flat.sfd")
+    inside = client.post("/api/new", json={"path": str(tmp_path / "My Sans" / "Other"), "family": "My Sans"}).json()
+    assert (tmp_path / "My Sans" / "Other.sfd").exists() and inside["familyname"] == "My Sans"  # already in a folder of that name: no nesting
     assert {g["name"] for g in info["glyphs"]} == {".notdef", "space"}
     assert next(g for g in info["glyphs"] if g["name"] == "space")["width"] == 512
     # usable like any font: create a glyph, draw, save, reopen
@@ -339,7 +343,7 @@ def test_webfont_is_a_loadable_font(client):
 def test_anchors_place_accents(client, tmp_path):
     """New font, anchor class created from scratch, anchors on a base and an
     accent, composite placed by them, anchors survive save and reopen."""
-    info = client.post("/api/new", json={"path": str(tmp_path / "Anc"), "family": "Anc"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Anc"), "family": "Anc"}).json()
     fid = info["fid"]
     base, acc = (client.post("/api/create", json={"fid": fid, "unicode": cp}).json()["name"] for cp in (0x61, 0x301))
     assert (base, acc) == ("a", "acutecomb")  # FontForge's standard names
@@ -406,7 +410,7 @@ def test_pair_kerning_matches_harfbuzz(client, tmp_path):
 
 
 def test_class_kerning_group_edit_and_exception(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "K"), "family": "K"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "K"), "family": "K"}).json()
     fid = info["fid"]
     square = {"points": [[50, 0, 1], [50, 700, 1], [550, 700, 1], [550, 0, 1]], "closed": True}
     for ch in "AÀVT":
@@ -434,7 +438,7 @@ def test_kerning_groups_ui_flow(client, tmp_path):
     """Groups made from nothing: pair kerning stays an exception, a group
     value applies to every member, moving a glyph between groups and
     deleting a group behave; HarfBuzz agrees after export."""
-    info = client.post("/api/new", json={"path": str(tmp_path / "G"), "family": "G"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "G"), "family": "G"}).json()
     fid = info["fid"]
     square = {"points": [[50, 0, 1], [50, 700, 1], [550, 700, 1], [550, 0, 1]], "closed": True}
     for ch in "AÀÁVWT":
@@ -464,7 +468,7 @@ def test_kerning_groups_ui_flow(client, tmp_path):
 
 
 def test_font_info_round_trip_and_export(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Info"), "family": "Info Sans"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Info"), "family": "Info Sans"}).json()
     fid = info["fid"]
     a = client.post("/api/create", json={"fid": fid, "unicode": 0x41}).json()["name"]
     client.post("/api/edit", json={"fid": fid, "name": a, "kind": "add_contour",
@@ -506,7 +510,7 @@ def test_font_info_round_trip_and_export(client, tmp_path):
 
 
 def test_font_info_underline_and_strikeout_reach_the_compiled_font(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Lines"), "family": "Lines"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Lines"), "family": "Lines"}).json()
     fid = info["fid"]
     fields = client.get("/api/font-info", params={"fid": fid}).json()["fields"]
     assert {"upos", "uwidth", "os2_strikeypos", "os2_strikeysize"} <= set(fields)
@@ -541,7 +545,7 @@ def test_features_round_trip_shapes_identically(client):
 
 
 def test_features_ligature_atomic_and_no_positioning(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Fea"), "family": "Fea"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Fea"), "family": "Fea"}).json()
     fid = info["fid"]
     tri = {"points": [[0, 0, 1], [150, 500, 1], [300, 0, 1]], "closed": True}
     for ch in "fi":
@@ -571,7 +575,7 @@ def test_features_ligature_atomic_and_no_positioning(client, tmp_path):
 
 
 def test_set_contour_and_add_extrema(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "Ext"), "family": "Ext"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Ext"), "family": "Ext"}).json()["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x6F})
     e = lambda kind, **args: client.post("/api/edit", json={"fid": fid, "name": "o", "kind": kind, "args": args})
     # an arch: its top (y = 375 at x = 500) is not a point yet
@@ -604,7 +608,7 @@ def test_generate_every_format(client, tmp_path, hinting):
 
 
 def test_validate_finds_and_fixes_problems(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "V"), "family": "V"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "V"), "family": "V"}).json()["fid"]
     for ch in "ABC":
         client.post("/api/create", json={"fid": fid, "unicode": ord(ch)})
     e = lambda name, **args: client.post("/api/edit", json={"fid": fid, "name": name, "kind": "add_contour", "args": args})
@@ -623,7 +627,7 @@ def test_validate_finds_and_fixes_problems(client, tmp_path):
 
 
 def test_family_masters(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Fam-Thin"), "family": "Fam", "style": "Thin"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Fam-Thin"), "family": "Fam", "style": "Thin"}).json()
     fid = info["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour",
@@ -648,7 +652,7 @@ def test_family_masters(client, tmp_path):
 
 
 def test_edit_master_style_and_weight(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "E-Thin"), "family": "E", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "E-Thin"), "family": "E", "style": "Thin"}).json()["fid"]
     ds = str(tmp_path / "E.designspace")
     client.post("/api/family/new", json={"fid": fid, "path": ds, "weight": 100})
     fam = client.post("/api/family/add", json={"fid": fid, "family": ds, "style": "Black", "weight": 900}).json()
@@ -670,7 +674,7 @@ def test_edit_master_style_and_weight(client, tmp_path):
 
 
 def test_family_compatibility_check(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "C-Thin"), "family": "C", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "C-Thin"), "family": "C", "style": "Thin"}).json()["fid"]
     square = {"points": [[0, 0, 1], [0, 700, 1], [40, 700, 1], [40, 0, 1]], "closed": True}
     for cp in (0x49, 0x4C):
         name = client.post("/api/create", json={"fid": fid, "unicode": cp}).json()["name"]
@@ -694,7 +698,7 @@ def test_family_compatibility_check(client, tmp_path):
 
 
 def test_family_blend_and_in_between_master(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "W-Thin"), "family": "W", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "W-Thin"), "family": "W", "style": "Thin"}).json()["fid"]
     stem = lambda w: {"points": [[0, 0, 1], [0, 700, 1], [w, 700, 1], [w, 0, 1]], "closed": True}
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour", "args": stem(40)})
@@ -725,7 +729,7 @@ def test_family_blend_and_in_between_master(client, tmp_path):
 
 def test_family_build_variable_and_statics(client, tmp_path):
     from fontTools.pens.boundsPen import BoundsPen
-    fid = client.post("/api/new", json={"path": str(tmp_path / "V-Thin"), "family": "V", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "V-Thin"), "family": "V", "style": "Thin"}).json()["fid"]
     stem = lambda w: [[0, 0, 1], [0, 700, 1], [w, 700, 1], [w, 0, 1]]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour", "args": {"points": stem(40), "closed": True}})
@@ -757,7 +761,7 @@ def test_family_build_variable_and_statics(client, tmp_path):
 
 
 def test_paste_copy_between_masters_and_remove_master(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "P-Thin"), "family": "P", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "P-Thin"), "family": "P", "style": "Thin"}).json()["fid"]
     sq = [[0, 0, 1], [0, 700, 1], [40, 700, 1], [40, 0, 1]]
     for cp in (0x49, 0x4C):
         client.post("/api/create", json={"fid": fid, "unicode": cp})
@@ -800,7 +804,7 @@ def test_restore_glyph_to_saved(client, tmp_path):
     undone = client.post("/api/undo", json={"fid": fid, "name": "o"}).json()
     assert undone["contours"][0][0][0] == original["contours"][0][0][0] + 55
     # a never-saved font has nothing to restore from
-    new = client.post("/api/new", json={"path": str(tmp_path / "N"), "family": "N"}).json()["fid"]
+    new = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "N"), "family": "N"}).json()["fid"]
     client.post("/api/create", json={"fid": new, "unicode": 0x41})
     import os
     os.remove(tmp_path / "N.sfd")
@@ -823,7 +827,7 @@ def test_set_contour_and_paste_in_a_quadratic_font(client):
 
 
 def test_family_found_from_its_master(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "F-Thin"), "family": "F", "style": "Thin"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "F-Thin"), "family": "F", "style": "Thin"}).json()
     assert client.get("/api/family/of", params={"font": info["path"]}).json() is None
     (tmp_path / "junk.designspace").write_text("not xml")  # unreadable ones are skipped
     ds = str(tmp_path / "F.designspace")
@@ -832,19 +836,19 @@ def test_family_found_from_its_master(client, tmp_path):
 
 
 def test_start_family_twice_or_on_a_taken_name(client, tmp_path):
-    a = client.post("/api/new", json={"path": str(tmp_path / "S-Regular"), "family": "S"}).json()
+    a = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "S-Regular"), "family": "S"}).json()
     ds = str(tmp_path / "S.designspace")
     first = client.post("/api/family/new", json={"fid": a["fid"], "path": ds, "weight": 400}).json()
     assert client.post("/api/family/new", json={"fid": a["fid"], "path": ds, "weight": 400}).json() == first
     # another font of the same family name: its own family file, not an error
-    b = client.post("/api/new", json={"path": str(tmp_path / "S-Other"), "family": "S"}).json()
+    b = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "S-Other"), "family": "S"}).json()
     other = client.post("/api/family/new", json={"fid": b["fid"], "path": ds, "weight": 400}).json()
     assert other["path"].endswith("S-2.designspace") and len(other["masters"]) == 1
 
 
 def test_static_weights_are_style_linked(client, tmp_path):
     """400 is Regular, 700 is Bold and share the family; every other weight is its own family under ID 16."""
-    fid = client.post("/api/new", json={"path": str(tmp_path / "Link-Regular"), "family": "Link", "style": "Regular"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Link-Regular"), "family": "Link", "style": "Regular"}).json()["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour",
                                    "args": {"points": [[0, 0, 1], [0, 700, 1], [40, 700, 1], [40, 0, 1]], "closed": True}})
@@ -874,7 +878,7 @@ def test_static_weights_are_style_linked(client, tmp_path):
 
 
 def test_font_info_style_linking_fields(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "Sl"), "family": "Sl"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Sl"), "family": "Sl"}).json()["fid"]
     r = client.post("/api/font-info", json={"fid": fid, "fields": {"os2_stylemap": 0x21, "macstyle": 3, "italicangle": -12},
                                             "names": {"Family": "Sl", "SubFamily": "Bold Italic"}})
     assert r.status_code == 200, r.text
@@ -887,7 +891,7 @@ def test_font_info_style_linking_fields(client, tmp_path):
 
 
 def test_metrics_keys_follow_and_persist(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Keys"), "family": "Keys"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Keys"), "family": "Keys"}).json()
     fid = info["fid"]
     box = lambda x0, x1: [[x0, 0, 1], [x0, 700, 1], [x1, 700, 1], [x1, 0, 1]]
     for ch, (x0, x1) in {"H": (80, 480), "n": (60, 400), "o": (50, 420)}.items():
@@ -923,7 +927,7 @@ def test_metrics_keys_follow_and_persist(client, tmp_path):
 
 def test_features_generated_name_convention_code_compiles(client, tmp_path):
     """The code the Features tab generates from .onum/.salt/.sc names must be accepted, aalt included."""
-    fid = client.post("/api/new", json={"path": str(tmp_path / "Gen"), "family": "Gen"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Gen"), "family": "Gen"}).json()["fid"]
     tri = {"points": [[0, 0, 1], [150, 500, 1], [300, 0, 1]], "closed": True}
     for name, cp in {"a": 0x61, "A": 0x41, "one": 0x31}.items():
         client.post("/api/create", json={"fid": fid, "unicode": cp})
@@ -945,7 +949,7 @@ def test_family_with_two_axes(client, tmp_path):
     """Weight and Width: masters sit on a grid, blends and the variable font use both axes."""
     from fontTools.pens.boundsPen import BoundsPen
     from fontTools.ttLib import TTFont
-    fid = client.post("/api/new", json={"path": str(tmp_path / "W-Regular"), "family": "W", "style": "Regular"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "W-Regular"), "family": "W", "style": "Regular"}).json()["fid"]
     box = lambda w, h: [[0, 0, 1], [0, h, 1], [w, h, 1], [w, 0, 1]]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour", "args": {"points": box(100, 700), "closed": True}})
@@ -994,7 +998,7 @@ def test_brace_layer_gives_one_glyph_an_extra_shape(client, tmp_path):
     """A glyph's brace layer at weight 500 bends its weight axis through the new shape; other glyphs are unaffected."""
     from fontTools.pens.boundsPen import BoundsPen
     from fontTools.ttLib import TTFont
-    fid = client.post("/api/new", json={"path": str(tmp_path / "B-Thin"), "family": "B", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "B-Thin"), "family": "B", "style": "Thin"}).json()["fid"]
     box = lambda w: [[0, 0, 1], [0, 700, 1], [w, 700, 1], [w, 0, 1]]
     for ch in "IH":
         client.post("/api/create", json={"fid": fid, "unicode": ord(ch)})
@@ -1039,7 +1043,7 @@ def test_brace_layer_gives_one_glyph_an_extra_shape(client, tmp_path):
 
 
 def test_smart_components_slide_between_two_extremes(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Smart"), "family": "Smart"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Smart"), "family": "Smart"}).json()
     fid = info["fid"]
     box = lambda x, w: [[x, 0, 1], [x, 700, 1], [x + w, 700, 1], [x + w, 0, 1]]
     for name in ("_stem", "_stem.max", "I", "bad", "bad.max"):
@@ -1082,7 +1086,7 @@ def test_glyph_database_info_blocks_and_add(client, tmp_path):
     assert e["decomposition"] == [0x65, 0x301] and e["uppercase"] == 0xC9 and e["lowercase"] is None
     assert client.get("/api/glyphdb/info", params={"unicode": 0x416}).json()["script"] == "Cyrillic"
     assert client.get("/api/glyphdb/info", params={"unicode": 0x110000}).status_code == 400
-    info = client.post("/api/new", json={"path": str(tmp_path / "Db"), "family": "Db"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Db"), "family": "Db"}).json()
     fid = info["fid"]
     blocks = {b["id"]: b for b in client.get("/api/glyphdb/blocks", params={"fid": fid}).json()}
     assert blocks["basic-latin"]["total"] == 95 and blocks["basic-latin"]["have"] == 1       # a new font has space
@@ -1109,7 +1113,7 @@ def test_glyph_database_counts_alternate_unicode_values(client):
 
 
 def test_interpolate_glyphs(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "Mix"), "family": "Mix"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Mix"), "family": "Mix"}).json()["fid"]
     box = lambda w: [[0, 0, 1], [0, 700, 1], [w, 700, 1], [w, 0, 1]]
     for name in ("a", "b", "odd"):
         client.post("/api/create", json={"fid": fid, "name": name})
@@ -1142,7 +1146,7 @@ def test_glyph_database_added_glyphs_survive_save_on_a_real_font(client, tmp_pat
 
 
 def test_autosave_saves_changed_sfd_in_place_and_only_then(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Auto"), "family": "Auto"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Auto"), "family": "Auto"}).json()
     fid = info["fid"]
     assert client.post("/api/autosave", json={"fid": fid}).json()["saved"] is False          # nothing changed since it was made
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
@@ -1274,7 +1278,7 @@ def test_plugins_listed_run_and_fail_clearly(client, tmp_path):
     assert all("error" not in by[i] for i in by if i.startswith("bundled/")) and "folder" not in by["bundled/round-coordinates"]
     assert [f["label"] for f in lst["folders"]] == ["bundled", "yours"]
 
-    fid = client.post("/api/new", json={"path": str(tmp_path / "Plug"), "family": "Plug"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Plug"), "family": "Plug"}).json()["fid"]
     box = lambda x0, x1, y1=700: [[x0, 0, 1], [x0, y1, 1], [x1, y1, 1], [x1, 0, 1]]
     for ch, pts in {"H": box(80, 500), "E": box(30, 420), "F": box(40, 380), "A": box(10.4, 600.6)}.items():
         client.post("/api/create", json={"fid": fid, "unicode": ord(ch)})
@@ -1306,7 +1310,7 @@ def test_plugins_listed_run_and_fail_clearly(client, tmp_path):
 
 
 def test_snapshots_create_compare_restore(client, tmp_path):
-    info = client.post("/api/new", json={"path": str(tmp_path / "Snap"), "family": "Snap"}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "Snap"), "family": "Snap"}).json()
     fid, path = info["fid"], info["path"]
     box = lambda w: [[0, 0, 1], [0, 700, 1], [w, 700, 1], [w, 0, 1]]
     for ch in "HI":
@@ -1523,7 +1527,7 @@ def _bounds(path, glyph):
 
 
 def _stroked_font(client, tmp_path, quadratic=False):
-    info = client.post("/api/new", json={"path": str(tmp_path / "S"), "family": "S", "quadratic": quadratic}).json()
+    info = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "S"), "family": "S", "quadratic": quadratic}).json()
     fid = info["fid"]
     name = client.post("/api/create", json={"fid": fid, "unicode": 0x49}).json()["name"]
     skeleton = {"points": [[100, 0, 1], [100, 700, 1]], "closed": False, "label": "~stroke 80 round round"}
@@ -1904,7 +1908,7 @@ def test_bolder_never_adds_or_drops_points(client):
 
 
 def test_family_blend_kerning_follows_the_masters(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "K-Thin"), "family": "K", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "K-Thin"), "family": "K", "style": "Thin"}).json()["fid"]
     for cp in (0x41, 0x56):
         client.post("/api/create", json={"fid": fid, "unicode": cp})
     ds = str(tmp_path / "K.designspace")
@@ -1930,7 +1934,7 @@ def test_script_example_bolder_every_glyph_keeps_points(client):
 
 
 def test_family_glyph_points_lists_every_master(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "G-Thin"), "family": "G", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "G-Thin"), "family": "G", "style": "Thin"}).json()["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour", "args": {"points": [[0, 0, 1], [0, 700, 1], [40, 700, 1], [40, 0, 1]], "closed": True}})
     ds = str(tmp_path / "G.designspace")
@@ -1943,7 +1947,7 @@ def test_family_glyph_points_lists_every_master(client, tmp_path):
 
 
 def test_family_all_points_two_masters(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "H-Thin"), "family": "H", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "H-Thin"), "family": "H", "style": "Thin"}).json()["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     ds = str(tmp_path / "H.designspace")
     client.post("/api/family/new", json={"fid": fid, "path": ds, "weight": 100})
@@ -1955,7 +1959,7 @@ def test_family_all_points_two_masters(client, tmp_path):
 
 
 def test_family_point_edit_deletes_and_inserts(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "P-Thin"), "family": "P", "style": "Thin"}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "P-Thin"), "family": "P", "style": "Thin"}).json()["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x49})
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour", "args": {"points": [[0, 0, 1], [0, 700, 1], [20, 700, 1], [40, 700, 1], [40, 0, 1]], "closed": True}})
     ds = str(tmp_path / "P.designspace")
@@ -1973,7 +1977,7 @@ def test_family_point_edit_deletes_and_inserts(client, tmp_path):
 
 
 def test_family_point_edit_runs_of_points(client, tmp_path):
-    fid = client.post("/api/new", json={"path": str(tmp_path / "R-Thin"), "family": "R", "style": "Thin", "quadratic": False}).json()["fid"]
+    fid = client.post("/api/new", json={"own_folder": False, "path": str(tmp_path / "R-Thin"), "family": "R", "style": "Thin", "quadratic": False}).json()["fid"]
     client.post("/api/create", json={"fid": fid, "unicode": 0x4F})
     client.post("/api/edit", json={"fid": fid, "name": "O", "kind": "add_contour", "args": {"points": [[0, 0, 1], [0, 100, 0], [50, 100, 0], [50, 50, 1], [50, 0, 1]], "closed": True}})
     ds = str(tmp_path / "R.designspace")
@@ -2083,3 +2087,31 @@ def test_ligature_glyphs_start_as_their_letters(client):
     filled = client.get("/api/glyph/x_empty_test", params={"fid": fid}).json()
     assert filled["contours"] and filled["refs_list"] == []
     assert client.post("/api/make-glyphs", json={"fid": fid, "items": [fill]}).json()["created"] == [], "a drawn glyph is never overwritten"
+
+
+@pytest.mark.skipif(not VFS, reason="no variable font installed")
+def test_split_variable_font_into_masters(client, tmp_path):
+    info = client.post("/api/open", json={"path": str(VFS[0])}).json()
+    r = client.post("/api/family/split", json={"fid": info["fid"], "path": str(tmp_path / "Split Test")})
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["folder"] == str(tmp_path / "Split Test") and Path(out["designspace"]).is_file()
+    assert len(out["masters"]) >= 2 and all(Path(m).parent == Path(out["folder"]) for m in out["masters"])
+    fam = client.get("/api/family", params={"path": out["designspace"]}).json()
+    assert fam["axes"][0]["tag"] == "wght" and len(fam["masters"]) == len(out["masters"])
+    check = client.get("/api/family/check", params={"path": out["designspace"]}).json()
+    assert not check["glyphs"], check["glyphs"][:3]  # the masters blend
+    again = client.post("/api/family/split", json={"fid": info["fid"], "path": str(tmp_path / "Split Test")})
+    assert again.status_code == 400  # never over a folder that has fonts in it
+
+
+CONSOLE = Path(r"C:\Users\Joep\Downloads\ConsoleSquareBetaVF.ttf")
+
+
+@pytest.mark.skipif(not CONSOLE.exists(), reason="font not on this machine")
+def test_split_keeps_the_in_between_master(client, tmp_path):
+    info = client.post("/api/open", json={"path": str(CONSOLE)}).json()
+    r = client.post("/api/family/split", json={"fid": info["fid"], "path": str(tmp_path / "Console")}).json()
+    fam = client.get("/api/family", params={"path": r["designspace"]}).json()
+    assert [m["weight"] for m in fam["masters"]] == [100, 400, 1000]  # gvar peaks at 400 as well as at the end
+    assert not client.get("/api/family/check", params={"path": r["designspace"]}).json()["glyphs"]

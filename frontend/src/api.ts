@@ -143,6 +143,12 @@ export class OutlineStore {
 
   private cache = new Map<string, Outline>()
   private points = new Map<string, Points>()
+  /** The newest outline of each glyph at any location: drawn while the one for a new location is on its way, so moving a slider never blanks the view. */
+  private last = new Map<string, Outline>()
+  /** The location the views asked for most recently: older ones are answered late or not at all, and must never become what is shown meanwhile. */
+  private newest = ''
+  /** The glyphs the views asked for at the newest location: what is on screen (and just was). */
+  private seen = new Set<string>()
   private wanted = new Map<string, { names: Set<string>; loc: Location | null }>()
   private pending = new Set<string>()
   /** Names the server did not send back, and when: asked again no sooner than a few seconds later, never in a tight loop. */
@@ -166,9 +172,12 @@ export class OutlineStore {
 
   /** Returns the cached outline, scheduling a fetch if it is missing. */
   want(name: string, loc: Location | null) {
-    const k = locKey(loc) + '|' + name
+    const lk0 = locKey(loc)
+    if (loc) { if (lk0 !== this.newest) { this.newest = lk0; this.seen = new Set() } this.seen.add(name) }
+    const k = lk0 + '|' + name
     const hit = this.cache.get(k)
-    if (hit || this.pending.has(k)) return hit
+    if (hit) return hit
+    if (this.pending.has(k)) return this.last.get(name)
     const gone = this.missing.get(k)
     if (gone !== undefined && Date.now() - gone < 5000) return undefined
     this.pending.add(k)
@@ -176,13 +185,34 @@ export class OutlineStore {
     if (!this.wanted.has(lk)) this.wanted.set(lk, { names: new Set(), loc })
     this.wanted.get(lk)!.names.add(name)
     if (!this.timer) this.timer = window.setTimeout(() => this.flush(), 0)
-    return undefined
+    return this.last.get(name)
+  }
+
+  /** Fetch what is on screen at each of these locations ahead of time (Play uses it, so the sweep only reads the cache). One after the other; `token.cancelled` stops it. */
+  async prefetch(locs: Location[], token: { cancelled: boolean }) {
+    const names = [...this.seen].slice(0, 200)
+    if (!names.length) return
+    for (const loc of locs) {
+      if (token.cancelled) return
+      const lk = locKey(loc)
+      const need = names.filter(n => !this.cache.has(lk + '|' + n))
+      if (!need.length) continue
+      const res = await api<RawOutline[]>('/api/outlines', this.fid ? { names: need, location: loc, fid: this.fid } : { names: need, location: loc })
+      for (const o of res) this.put(o, loc, false)
+    }
+    this.emit()
   }
 
   private async flush() {
     this.timer = 0
-    const batches = [...this.wanted.values()]
+    let batches = [...this.wanted.values()]
     this.wanted.clear()
+    // a slider moved on while these waited: asking for the positions it passed through would only slow the one it is at
+    const stale = batches.filter(b => b.loc && locKey(b.loc) !== this.newest)
+    if (stale.length < batches.length) {
+      for (const b of stale) for (const n of b.names) this.pending.delete(locKey(b.loc) + '|' + n)
+      batches = batches.filter(b => !stale.includes(b))
+    }
     for (const { names, loc } of batches) {
       const list = [...names]
       try {
@@ -204,22 +234,26 @@ export class OutlineStore {
   put(o: RawOutline, loc: Location | null, notify = true) {
     if (!loc && !('contours' in o)) this.points.delete(o.name)
     this.missing.delete(locKey(loc) + '|' + o.name)
-    this.cache.set(locKey(loc) + '|' + o.name, {
+    const out: Outline = {
       name: o.name, width: o.width, lsb: o.lsb ?? 0, rsb: o.rsb ?? 0, path: toPath(o),
       uses: refNames(o), empty: !o.d.trim() && !o.refs?.length, box: rawBox(o),
-    })
+    }
+    this.cache.set(locKey(loc) + '|' + o.name, out)
+    if (!loc || locKey(loc) === this.newest) this.last.set(o.name, out)  // a late answer for a position the slider has left is kept, but not shown meanwhile
     if (notify) this.emit()
   }
 
   /** After editing `name`: forget every cached composite that draws it. */
   invalidateUsers(name: string) {
     for (const [k, o] of this.cache) if (o.uses.includes(name)) this.cache.delete(k)
+    for (const [n, o] of this.last) if (o.uses.includes(name) || n === name) this.last.delete(n)
     for (const [n, p] of this.points) if (p.refs_list.includes(name)) this.points.delete(n)
     this.emit()
   }
 
   clear() {
     this.cache.clear()
+    this.last.clear()
     this.points.clear()
     this.pending.clear()
     this.wanted.clear()

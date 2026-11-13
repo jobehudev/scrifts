@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { NumField } from './NumField'
 
 export type Master = { path: string; name: string; weight: number; location: Record<string, number> }
 export type BlendGlyph = { width: number; contours: [number, number, number][][]; closed: boolean[] }
@@ -118,14 +119,15 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
         <div className="flex flex-wrap items-center gap-2">
           <input type="range" min={ax.min} max={ax.max} step={1} value={weight ?? ax.default}
             onChange={e => onWeight(Number(e.target.value))} aria-label="Preview weight" className="w-32 accent-primary" />
-          <span className={`w-8 font-mono ${weight === null ? 'text-muted-foreground' : ''}`}>{weight ?? '—'}</span>
+          <div className="w-36"><NumField hideLabel buttons label="Weight" min={ax.min} max={ax.max} value={weight ?? ax.default} onCommit={n => onWeight(Math.round(n))} /></div>
           <Button size="icon-xs" variant={playing ? 'secondary' : 'ghost'} aria-pressed={playing} aria-label={playing ? 'Stop the animation' : 'Play: sweep the weight'}
             title={playing ? 'Stop' : 'Play: watch the shapes change from the lightest master to the heaviest and back'} onClick={() => setPlaying(p => !p)}>{playing ? <Pause /> : <Play />}</Button>
           {extra.map(a => (
             <label key={a.name} className="flex items-center gap-1 text-muted-foreground" title={a.name}>{a.tag}
               <input type="range" min={a.min} max={a.max} step={1} value={at(a.name)} aria-label={`Preview ${a.name}`}
                 onChange={e => { if (weight === null) onWeight(ax.default); onAxis(a.name, Number(e.target.value)) }} className="w-24 accent-primary" />
-              <span className="w-8 font-mono text-foreground">{at(a.name)}</span>
+              <div className="w-32"><NumField hideLabel buttons label={a.name} min={a.min} max={a.max} value={at(a.name)}
+                onCommit={n => { if (weight === null) onWeight(ax.default); onAxis(a.name, Math.round(n)) }} /></div>
             </label>
           ))}
           {weight !== null && <>

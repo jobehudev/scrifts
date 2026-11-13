@@ -167,6 +167,7 @@ class NewReq(BaseModel):
     style: str = "Regular"
     em: int = 1000
     quadratic: bool = False
+    own_folder: bool = True  # put the font in a folder named after its family (so its masters can sit together)
 
 
 @app.post("/api/new")
@@ -181,6 +182,12 @@ def new_font(req: NewReq):
         raise HTTPException(400, "Units per em must be between 16 and 16384")
     if not os.path.isdir(os.path.dirname(path)):
         raise HTTPException(404, f"No such folder: {os.path.dirname(path)}")
+    if req.own_folder:
+        parent = os.path.dirname(path)
+        name = "".join(c for c in req.family.strip() if c not in '<>:"/\\|?*').strip(" .")
+        if name and os.path.basename(parent).lower() != name.lower():  # already in a folder of that name: stay there
+            os.makedirs(os.path.join(parent, name), exist_ok=True)
+            path = os.path.join(parent, name, os.path.basename(path))
     info = _call("new", path=path, family=req.family.strip(), style=req.style.strip() or "Regular",
                  em=req.em, quadratic=req.quadratic)
     info["axes"], info["instances"] = [], []

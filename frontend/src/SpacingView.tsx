@@ -513,7 +513,7 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
     const here = blending ? blendCache.current.get(posKey) : undefined
     const b = here?.has(name) ? here.get(name) : blending ? lastBlend.current.get(name) : undefined
     if (b) return { path: b.path, width: b.width, shift: 0 }
-    const m = metrics(name), o = outlines.get(name, loc)
+    const m = metrics(name), o = outlines.want(name, loc)  // the last drawing while the one for this weight is on its way: text must not blank out as the slider moves
     return m && o ? { path: o.path, width: m.width, shift: m.shift, lsb: m.lsb, rsb: m.rsb } : null
   }
 

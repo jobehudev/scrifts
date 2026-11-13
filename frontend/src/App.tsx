@@ -27,6 +27,7 @@ const SpacingView = lazy(() => import('./SpacingView').then(m => ({ default: m.S
 const AccentView = lazy(() => import('./AccentView').then(m => ({ default: m.AccentView })))
 const FeaturesView = lazy(() => import('./FeaturesView').then(m => ({ default: m.FeaturesView })))
 const ScriptView = lazy(() => import('./ScriptView').then(m => ({ default: m.ScriptView })))
+import { VariableBar, useVariableState } from './VariableBar'
 const VariablePanel = lazy(() => import('./VariablePanel').then(m => ({ default: m.VariablePanel })))
 const SmartPanel = lazy(() => import('./SmartPanel').then(m => ({ default: m.SmartPanel })))
 const PropertiesPanel = lazy(() => import('./PropertiesPanel').then(m => ({ default: m.PropertiesPanel })))
@@ -431,12 +432,23 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
   }) }, [font, family, familyDialog, run, goMaster])
 
 
+  const vv = useVariableState(font, setLoc)
+  // a variable font can't be edited shape by shape: ask where to save, then make the family of masters and open it
+  const splitVariable = useCallback(() => { if (font) run('Split into masters', async () => {
+    const stem = font.path.replace(/^.*[\/]/, '').replace(/\.[^.]*$/, '').replace(/-?VariableFont.*$/i, '').replace(/-?VF$/i, '') || 'Project'
+    const path = await pick('save', stem)  // the project's name: it becomes a folder (and the family's file) there
+    if (!path) return
+    const r = await api<{ designspace: string; default: string; masters: string[]; folder: string }>('/api/family/split', { path })
+    localStorage.setItem('forge.family', r.designspace)
+    toast.success(`Split into ${r.masters.length} editable masters`, { description: r.folder })
+    await adopt(() => api<FontInfo & { fid: number }>('/api/open', { path: r.default }))
+  }) }, [font, run, adopt])
+
   const newFont = useCallback((spec: NewFont) => {
     setNewOpen(false)
     run('New font', async () => {
-      const dir = recent[0]?.path.replace(/[\\/][^\\/]*$/, '') ?? ''
       const name = `${spec.family}-${spec.style}`.replace(/\s+/g, '') + '.sfd'
-      const path = await pick('save', dir ? `${dir}\\${name}` : name)
+      const path = await pick('save', name)  // starts in Documents/Scrifts; the font gets its own folder there, named after the family
       if (!path) return
       await adopt(() => api<FontInfo & { fid: number }>('/api/new', { path, ...spec }))
       setGuidesState([])
@@ -444,7 +456,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       localStorage.setItem('forge.grid', 'latin')  // a new font is all empty slots: show them
       window.dispatchEvent(new CustomEvent('forge:cmd', { detail: 'grid:latin' }))
     })
-  }, [run, adopt, recent, view])
+  }, [run, adopt, view])
 
   /** Re-read the glyph list after a script or a new glyph; drop cached outlines. */
   /** Font-wide guides live in FontForge's guide layer, so they are saved with the font. */
@@ -747,7 +759,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       ? <SmartPanel docked name={sel} onChanged={() => { setBlendRev(r => r + 1); runCheck(family) }} />
       : <p className="p-3 text-xs text-muted-foreground">{loc ? 'Move the axes back to their defaults to edit smart parts.' : 'Select a glyph.'}</p>
     return font.axes.length
-      ? <VariablePanel key={font.path} font={font} onLocation={setLoc} pickSave={initial => pick('save', initial)} run={run} />
+      ? <VariablePanel key={font.path} font={font} vv={vv} pickSave={initial => pick('save', initial)} run={run} onSplit={splitVariable} />
       : <p className="p-3 text-xs text-muted-foreground">This font has no variable axes.</p>
   }
 
@@ -815,6 +827,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
               <SoloMasterBar style={font.fontname.includes('-') ? font.fontname.split('-').slice(1).join('-') : 'Regular'}
                 canAdd onAdd={() => { setFamilyDialog('new'); setFamilyOpen(true) }} busy={!!busy} />
             )}
+            {!family && font.axes.length > 0 && <VariableBar font={font} vv={vv} onSplit={splitVariable} busy={!!busy} />}
             {family && <MasterBar family={family} current={font.path} onSwitch={switchMaster} onRemove={setRemoving} onEdit={setEditingMaster} onAdd={() => { setFamilyDialog('add'); setFamilyOpen(true) }} busy={!!busy}
               check={check} onCheck={() => setCheckOpen(true)}
               weight={weight} onWeight={setWeight} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))} onAddAxis={() => setAxisOpen(true)} glyph={sel} onAddBrace={addBrace} onRemoveBrace={removeBrace} onAddHere={() => { setFamilyDialog('blend'); setFamilyOpen(true) }} />}
