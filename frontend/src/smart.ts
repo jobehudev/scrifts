@@ -291,10 +291,12 @@ export function hitTransformBox(
   for (const [h, pt] of Object.entries(handles) as [ScaleHandle, Pt][]) {
     if (Math.hypot(sx - X(pt.x), sy - Y(pt.y)) <= 6.5) return { mode: 'scale', handle: h }
   }
+  // rotating: outside the box only (inside, the corner widgets own the space), and from a good distance away
+  const xs = [X(b.minX), X(b.maxX)], ys = [Y(b.minY), Y(b.maxY)]
+  if (sx >= Math.min(...xs) && sx <= Math.max(...xs) && sy >= Math.min(...ys) && sy <= Math.max(...ys)) return null
   for (const h of ['nw', 'ne', 'se', 'sw'] as const) {
     const pt = handles[h]
-    const d = Math.hypot(sx - X(pt.x), sy - Y(pt.y))
-    if (d > 6.5 && d <= 36) return { mode: 'rotate' }  // anywhere near a corner, outside the box
+    if (Math.hypot(sx - X(pt.x), sy - Y(pt.y)) <= 90) return { mode: 'rotate' }
   }
   return null
 }

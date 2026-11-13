@@ -310,8 +310,13 @@ def op_edit(name, kind, **a):
                 continue
             c = layer[ci]
             pts = [[p.x, p.y, 1 if p.on_curve else 0] for p in c]
-            new = corners.round_points(pts, bool(c.closed), set(range(len(pts))) if whole else picked[ci], float(a["radius"]), a.get("corner", "round"), bool(layer.is_quadratic))
-            if len(new) != len(pts):
+            sel = set(range(len(pts))) if whole else picked[ci]
+            if a.get("sharpen"):  # round corners made earlier go back to sharp first, then take the new radius (0: stay sharp)
+                base, found = corners.sharpen_points(pts, bool(c.closed), sel)
+                new = corners.round_points(base, bool(c.closed), set(found), float(a["radius"]), a.get("corner", "round"), bool(layer.is_quadratic)) if float(a["radius"]) > 0 else base
+            else:
+                new = corners.round_points(pts, bool(c.closed), sel, float(a["radius"]), a.get("corner", "round"), bool(layer.is_quadratic))
+            if new != pts:
                 n = _contour(new, c.closed, layer.is_quadratic)
                 n.name = c.name
                 layer[ci] = n

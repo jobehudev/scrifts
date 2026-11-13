@@ -5,7 +5,7 @@ export type P = [number, number, number, number?]  // x, y, 1 on-curve / 0 handl
 export type CornerKind = 'round' | 'inverted' | 'chamfer'
 export const CORNER_KINDS: [CornerKind, string][] = [['round', 'Round'], ['inverted', 'Inverted round'], ['chamfer', 'Chamfer']]
 
-export type Corner = { ux: number; uy: number; lu: number; vx: number; vy: number; lv: number; theta: number }
+export type Corner = { ux: number; uy: number; lu: number; vx: number; vy: number; lv: number; theta: number; cu: number; cv: number }  // cu, cv: how much of each edge the corner may use
 
 /** The two edges meeting at point i, if it is a corner between two straight edges (the only kind that can be rounded). */
 export function cornerAt(pts: P[], closed: boolean, i: number): Corner | null {
@@ -17,11 +17,14 @@ export function cornerAt(pts: P[], closed: boolean, i: number): Corner | null {
   if (lu < 1e-6 || lv < 1e-6) return null
   const ux = (a[0] - x) / lu, uy = (a[1] - y) / lu, vx = (b[0] - x) / lv, vy = (b[1] - y) / lv
   const theta = Math.acos(Math.max(-1, Math.min(1, ux * vx + uy * vy)))
-  return theta < 1e-3 || theta > Math.PI - 1e-3 ? null : { ux, uy, lu, vx, vy, lv, theta }
+  // an edge may be used up to its neighbour's tangent point when that neighbour can't be rounded itself (a curve starts there); next to another sharp corner each takes half
+  const cu = !pts[(i - 2 + n) % n][2] || (!closed && i - 1 === 0) ? lu : lu / 2
+  const cv = !pts[(i + 2) % n][2] || (!closed && i + 1 === n - 1) ? lv : lv / 2
+  return theta < 1e-3 || theta > Math.PI - 1e-3 ? null : { ux, uy, lu, vx, vy, lv, theta, cu, cv }
 }
 
 /** The biggest radius that fits this corner (each end may use half its edge). */
-export const maxRadius = (c: Corner) => Math.min(c.lu / 2, c.lv / 2) * Math.tan(c.theta / 2)
+export const maxRadius = (c: Corner) => Math.min(c.cu, c.cv) * Math.tan(c.theta / 2)
 
 /** Where the corner's widget sits: the middle of the rounding circle, on the line that halves the corner. */
 export function widgetPos(pts: P[], c: Corner, i: number, radius: number, minDist: number): [number, number] {
@@ -50,7 +53,7 @@ export function roundPoints(pts: P[], closed: boolean, picked: Set<number>, radi
     const c = picked.has(i) && radius > 0 ? cornerAt(pts, closed, i) : null
     if (!c) { out.push(p); return }
     const [x, y] = p, half = c.theta / 2
-    const t = Math.min(radius / Math.tan(half), c.lu / 2, c.lv / 2)
+    const t = Math.min(radius / Math.tan(half), c.cu, c.cv)
     const r = t * Math.tan(half), h = 4 / 3 * Math.tan((Math.PI - c.theta) / 4) * r
     const t1: [number, number] = [x + c.ux * t, y + c.uy * t], t2: [number, number] = [x + c.vx * t, y + c.vy * t]
     if (kind === 'chamfer') { out.push(rnd(...t1, 1), rnd(...t2, 1)); return }
@@ -65,4 +68,40 @@ export function roundPoints(pts: P[], closed: boolean, picked: Set<number>, radi
     out.push(rnd(...t1, 1), rnd(...c1, 0), rnd(...c2, 0), rnd(...t2, 1))
   })
   return out
+}
+
+/** Mirrors backend find_rounded: points i..i+3 are a round corner made by roundPoints; returns where its two edges would meet and the radius. */
+export function findRounded(pts: P[], closed: boolean, i: number, tol = 3): { x: number; y: number; r: number } | null {
+  const n = pts.length
+  if (n < 5 || (!closed && !(i >= 1 && i <= n - 5))) return null
+  const [p0, t1, c1, c2, t2, pn] = [-1, 0, 1, 2, 3, 4].map(k => pts[(i + k + n) % n])
+  if (!(p0[2] && t1[2] && t2[2] && pn[2]) || c1[2] || c2[2]) return null
+  const d1 = [t1[0] - p0[0], t1[1] - p0[1]], d2 = [t2[0] - pn[0], t2[1] - pn[1]]
+  const l1 = Math.hypot(d1[0], d1[1]), l2 = Math.hypot(d2[0], d2[1])
+  const det = d1[0] * d2[1] - d1[1] * d2[0]
+  if (l1 < 1e-6 || l2 < 1e-6 || Math.abs(det) < 1e-3 * l1 * l2) return null
+  const w = [t2[0] - t1[0], t2[1] - t1[1]]
+  const s = (w[0] * d2[1] - w[1] * d2[0]) / det, u = (w[0] * d1[1] - w[1] * d1[0]) / det
+  if (s <= 0 || u <= 0) return null
+  if (Math.abs((c1[0] - t1[0]) * d1[1] - (c1[1] - t1[1]) * d1[0]) / l1 > tol || Math.abs((c2[0] - t2[0]) * d2[1] - (c2[1] - t2[1]) * d2[0]) / l2 > tol) return null
+  const cos = Math.max(-1, Math.min(1, (d1[0] * d2[0] + d1[1] * d2[1]) / (l1 * l2)))
+  const half = Math.acos(cos) / 2  // the corner's angle theta = acos(cos) between the edges leaving it
+  return { x: Math.round(t1[0] + d1[0] * s), y: Math.round(t1[1] + d1[1] * s), r: Math.round(s * l1 * Math.tan(half)) }
+}
+
+/** Mirrors backend sharpen_points: round corners touching a picked index go back to sharp; also returns the restored corners' indexes. */
+export function sharpenPoints(pts: P[], closed: boolean, picked: Set<number>): { pts: P[]; corners: number[] } {
+  const n = pts.length, arcs = new Map<number, { x: number; y: number }>(), used = new Set<number>()
+  for (let i = 0; i < n; i++) {
+    const idx = [0, 1, 2, 3].map(k => (i + k) % n)
+    if (!idx.some(j => picked.has(j)) || idx.some(j => used.has(j))) continue
+    const c = findRounded(pts, closed, i)
+    if (c) { arcs.set(i, c); idx.forEach(j => used.add(j)) }
+  }
+  const out: P[] = [], corners: number[] = []
+  pts.forEach((p, i) => {
+    const a = arcs.get(i)
+    if (a) { corners.push(out.length); out.push([a.x, a.y, 1]) } else if (!used.has(i)) out.push(p)
+  })
+  return { pts: out, corners }
 }

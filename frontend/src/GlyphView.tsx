@@ -20,7 +20,7 @@ import {
   subdivideContourSegment, togglePointSmooth, type ScaleHandle, type SmartGuide,
 } from './smart'
 import { oval, rect } from './primitives'
-import { cornerAt, radiusFromDrag, roundPoints, widgetPos, type CornerKind } from './corners'
+import { cornerAt, findRounded, radiusFromDrag, roundPoints, sharpenPoints, widgetPos, type CornerKind } from './corners'
 import { CornersDialog } from './CornersDialog'
 import { pointFocus, usePointFocus } from './pointFocus'
 import { useCompareMarks } from './compareMarks'
@@ -42,7 +42,7 @@ type Drag =
   | { kind: 'box_rotate'; bounds: NonNullable<ReturnType<typeof selectionBounds>>; startAngle: number; angle: number; matrix: [number, number, number, number, number, number] }
   | { kind: 'marquee'; a: Pt; b: Pt; add: boolean }
   | { kind: 'pen' }
-  | { kind: 'corner'; ci: number; pi: number; r: number; single: boolean }  // a corner widget: its radius while dragged (Ctrl: this corner only)
+  | { kind: 'corner'; ci: number; pi: number; r: number; single: boolean; sharpen?: boolean }  // a corner widget: its radius while dragged (Ctrl: this corner only)
   | { kind: 'shape'; a: Pt; b: Pt; square: boolean; center: boolean }  // Rectangle/Oval: dragged from a corner; Shift: square, Alt: from the middle
   | { kind: 'shaper'; pts: Pt[]; alt: boolean }  // Shape Builder: the path dragged across the regions so far; alt: removing them
   | { kind: 'bearing'; side: 'L' | 'R'; sx: number; dx: number }  // FontForge-style: drag the metric lines
@@ -140,6 +140,9 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   const [drag, setDrag] = useState<Drag | null>(null)
   const [cornerKind, setCornerKind] = useState<CornerKind>(() => (localStorage.getItem('forge.cornerKind') as CornerKind) || 'round')
   const [cornerDlg, setCornerDlg] = useState<{ r: number } | null>(null)  // the Corners dialog; r: the radius being previewed
+  // the last rounding, kept live: the outline from before it, so its widgets can be dragged back out (undo + redo with the new radius)
+  const [live, setLive] = useState<{ name: string; base: Points; pairs: [number, number][]; r: number; expect: number } | null>(null)
+  const liveOn = live && live.name === name ? live : null
   const [pen, setPen] = useState<Anchor[]>([])
   const [hover, setHover] = useState<Pt | null>(null)
   const [overGuide, setOverGuide] = useState<'x' | 'y' | null>(null)  // the pointer is on a guide: it can be dragged
@@ -293,10 +296,21 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if (drag?.kind === 'corner' || cornerDlg) {  // a corner being rounded, before the edit is made
       const r = drag?.kind === 'corner' ? drag.r : cornerDlg!.r
       const single = drag?.kind === 'corner' && drag.single
-      return pts.contours.map((c, ci) => {
-        const ps = new Set<number>()
-        for (const k of single ? [key((drag as { ci: number }).ci, (drag as { pi: number }).pi)] : sel) { const [a, b] = unkey(k); if (a === ci) ps.add(b) }
-        return ps.size ? roundPoints(c, pts.shapes[ci]?.closed ?? true, ps, r, cornerKind) as Pt3[] : c
+      const base = liveOn?.base ?? pts
+      const list: [number, number][] = liveOn ? liveOn.pairs : single ? [[(drag as { ci: number }).ci, (drag as { pi: number }).pi]] : [...sel].map(unkey)
+      if (drag?.kind === 'corner' && drag.sharpen) {  // sharpening round corners, then rounding them to the new radius
+        return base.contours.map((c, ci) => {
+          const closed = base.shapes[ci]?.closed ?? true
+          const only = single ? ci === drag.ci : sel.size > 0
+          const ps = new Set<number>(single ? [drag.pi, drag.pi + 1, drag.pi + 2, drag.pi + 3].map(i => i % c.length) : [...sel].filter(k => unkey(k)[0] === ci).map(k => unkey(k)[1]))
+          if (!only || !ps.size) return c
+          const sh = sharpenPoints(c, closed, ps)
+          return (r > 0 ? roundPoints(sh.pts, closed, new Set(sh.corners), r, cornerKind) : sh.pts) as Pt3[]
+        })
+      }
+      return base.contours.map((c, ci) => {
+        const ps = new Set(list.filter(([a]) => a === ci).map(([, b]) => b))
+        return ps.size ? roundPoints(c, base.shapes[ci]?.closed ?? true, ps, r, cornerKind) as Pt3[] : c
       })
     }
     const m = drag?.kind === 'move' ? drag : null
@@ -306,7 +320,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       const v = d.get(key(ci, pi))
       return v ? [p[0] + v[0], p[1] + v[1], p[2], p[3]] as Pt3 : p
     }))
-  }, [pts, drag, deltas, moving, sel, cornerKind, cornerDlg])
+  }, [pts, drag, deltas, moving, sel, cornerKind, cornerDlg, liveOn])
 
   const selBounds = useMemo(() => (shown && editable ? selectionBounds(shown, sel) : null), [shown, editable, sel])
 
@@ -406,6 +420,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
         duration: 9000,
       })
     }
+    if (kind !== 'round_corners') setLive(null)
     if (kind !== 'move' && kind !== 'rename' && kind !== 'transform') setSel(new Set())  // indices shift (moving, renaming and transforming keep every point where it is in the list)
     run(() => api<Points>('/api/edit', { name, kind, args }))
   }, [name, run, masterOps?.others.length])
@@ -420,8 +435,9 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       return api<Points>(`/api/glyph/${encodeURIComponent(name)}`)
     })
   }
-  const undo = () => { if (name) { setSel(new Set()); run(() => api<Points>('/api/undo', { name })) } }
-  const redo = () => { if (name) { setSel(new Set()); run(() => api<Points>('/api/redo', { name })) } }
+  const undo = () => { if (name) { setLive(null); setSel(new Set()); run(() => api<Points>('/api/undo', { name })) } }
+  const redo = () => { if (name) { setLive(null); setSel(new Set()); run(() => api<Points>('/api/redo', { name })) } }
+  useEffect(() => { setLive(l => !l ? l : l.expect > 0 ? { ...l, expect: l.expect - 1 } : null) }, [pts])  // any outline change after the rounding's own result ends the live widgets
 
   const moveSel = (dx: number, dy: number, alt = false) => {
     if (!moving.size || (!dx && !dy)) return
@@ -739,6 +755,20 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     ctx.lineWidth = 1
 
     // shadow letter: its outline and its advance, from the same origin
+    // no shadow letter to compare with: show this glyph's own character in the
+    // system font, as in the grid, for when you don't know how to write it
+    if (vis.shadow && !shadow && !shadowName && glyphInfo && glyphInfo.unicode >= 0) {
+      ctx.save()
+      ctx.globalAlpha = 0.35; ctx.fillStyle = t.shadow; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'
+      // sized so the system font's cap height (capitals) or x-height (the rest) equals this font's
+      const ch = String.fromCodePoint(glyphInfo.unicode)
+      const cap = ch !== ch.toLowerCase(), target = cap ? font.capheight : font.xheight
+      ctx.font = '100px system-ui'
+      const ref = ctx.measureText(cap ? 'H' : 'x').actualBoundingBoxAscent
+      ctx.font = `${target && ref ? 100 * target * s / ref : font.em * s * 0.75}px system-ui`
+      ctx.fillText(ch, X0(0), Y0(0))
+      ctx.restore()
+    }
     if (vis.shadow && shadow) {
       inPage(c => { c.globalAlpha = 0.35; c.fillStyle = t.shadow; c.fill(shadow.path); c.globalAlpha = 1 })
       ctx.setLineDash([2, 3])
@@ -1124,18 +1154,40 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   }
   // Live corners: a round widget on each selected corner between two straight edges; drag it inward to round, as in Illustrator
   const WIDGET_PX = 12
+  type CornerWidget = { ci: number; pi: number; cr: NonNullable<ReturnType<typeof cornerAt>>; c: Pt3[]; rounded?: number }
   const cornerWidgets = picking && editable && atDefault && pts && !cornerDlg && (!drag || drag.kind === 'corner')
-    ? [...sel].flatMap(k => {
-      const [ci, pi] = unkey(k)
-      const c = pts.contours[ci]
-      const cr = c && !hidden.has(ci) && !locked.has(ci) ? cornerAt(c, pts.shapes[ci]?.closed ?? true, pi) : null
-      return cr ? [{ ci, pi, cr }] : []
-    }) : []
-  const widgetXY = (w: { ci: number; pi: number; cr: NonNullable<ReturnType<typeof cornerAt>> }) =>
-    widgetPos(pts!.contours[w.ci], w.cr, w.pi, drag?.kind === 'corner' && (!drag.single || (drag.ci === w.ci && drag.pi === w.pi)) ? drag.r : 0, WIDGET_PX / xf.current.s)
+    ? (liveOn ? liveOn.pairs : [...sel].map(unkey)).flatMap(([ci, pi]): CornerWidget[] => {
+      const src = liveOn?.base ?? pts
+      const c = src.contours[ci]
+      if (!c || hidden.has(ci) || locked.has(ci)) return []
+      const closed = src.shapes[ci]?.closed ?? true
+      const cr = cornerAt(c, closed, pi)
+      if (cr) return [{ ci, pi, cr, c }]
+      if (liveOn) return []
+      // a round corner made earlier: its widget sits where the arc's edges would meet, and dragging it out sharpens or re-rounds it
+      const n = c.length
+      for (const t1 of [pi, (pi - 3 + n) % n]) {
+        const f = findRounded(c, closed, t1)
+        if (!f) continue
+        const tmp: Pt3[] = [c[(t1 - 2 + n) % n], c[(t1 - 1 + n) % n], [f.x, f.y, 1], c[(t1 + 4) % n], c[(t1 + 5) % n]]  // the corner with one more point each side, so the room beside it is known
+        const tcr = cornerAt(tmp, false, 2)
+        return tcr ? [{ ci, pi: t1, cr: tcr, c: tmp, rounded: f.r }] : []
+      }
+      return []
+    }).filter((w, i, all) => all.findIndex(q => q.ci === w.ci && q.pi === w.pi) === i) : []
+  const widgetXY = (w: CornerWidget) =>
+    widgetPos(w.c, w.cr, w.rounded ? 2 : w.pi, drag?.kind === 'corner' && (!drag.single || (drag.ci === w.ci && drag.pi === w.pi)) ? drag.r : w.rounded ?? liveOn?.r ?? 0, WIDGET_PX / xf.current.s)
   const widgetAt = (p: Pt) => cornerWidgets.find(w => { const [x, y] = widgetXY(w); return Math.hypot(x - p.x, y - p.y) * xf.current.s < 8 })
   const applyCorners = (radius: number, kind: CornerKind, points?: [number, number][]) => {
     localStorage.setItem('forge.cornerKind', kind); setCornerKind(kind)
+    if (liveOn && name) {  // re-rounding the last rounding: back to the outline from before it, then round that
+      setLive(radius > 0 ? { ...liveOn, r: radius, expect: 1 } : null); setSel(new Set())
+      run(async () => {
+        await api('/api/undo', { name })
+        return radius > 0 ? api<Points>('/api/edit', { name, kind: 'round_corners', args: { radius, corner: kind, points: liveOn.pairs } }) : api<Points>(`/api/glyph/${encodeURIComponent(name)}`)
+      })
+      return
+    }
     edit('round_corners', { radius, corner: kind, points })
   }
   const snap = (p: Pt): Pt => {
@@ -1228,7 +1280,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
         const next = order[(order.indexOf(cornerKind) + 1) % order.length]
         localStorage.setItem('forge.cornerKind', next); setCornerKind(next)
         toast(`Corner type: ${next === 'inverted' ? 'inverted round' : next}`)
-      } else setDrag({ kind: 'corner', ci: cw.ci, pi: cw.pi, r: 0, single: e.ctrlKey })
+      } else setDrag({ kind: 'corner', ci: cw.ci, pi: cw.pi, r: cw.rounded ?? liveOn?.r ?? 0, single: !liveOn && e.ctrlKey, sharpen: cw.rounded !== undefined })
       return
     }
     const ah = hitAnchor(p)
@@ -1350,7 +1402,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       const e2 = picking && editable && !hit(p) ? nearEdge(screen(e).sx) : null
       if (e2 !== edgeHover) setEdgeHover(e2)
       let bh: 'rotate' | null = null
-      if (picking && selBounds && !hit(p)) {
+      if (picking && selBounds && !hit(p) && !widgetAt(p)) {
         const { s, ox, base } = xf.current
         bh = hitTransformBox(selBounds, scr.sx, scr.sy, x => ox + x * s, y => base - y * s)?.mode === 'rotate' ? 'rotate' : null
       }
@@ -1359,8 +1411,9 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     }
     if (drag.kind === 'shaper') { setDrag({ kind: 'shaper', pts: [...drag.pts, p], alt: e.altKey }); return }
     if (drag.kind === 'corner') {
-      const c = pts?.contours[drag.ci], cr = c && cornerAt(c, pts.shapes[drag.ci]?.closed ?? true, drag.pi)
-      if (c && cr) setDrag({ ...drag, r: Math.round(radiusFromDrag(c, cr, drag.pi, p.x, p.y, WIDGET_PX / xf.current.s)) })
+      const w = cornerWidgets.find(q => q.ci === drag.ci && q.pi === drag.pi)
+      const c = w?.c, cr = w?.cr
+      if (c && cr && w) setDrag({ ...drag, r: Math.round(radiusFromDrag(c, cr, w.rounded ? 2 : drag.pi, p.x, p.y, WIDGET_PX / xf.current.s)) })
       return
     }
     if (drag.kind === 'shape') { setDrag({ ...drag, b: e.ctrlKey ? p : smartSnap(p, { exclude: new Set() }).pt, square: e.shiftKey, center: e.altKey }); return }
@@ -1461,7 +1514,13 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       else { setVis(v => ({ ...v, guides: true })); set([...list, drag.v]) }
     }
     if (drag?.kind === 'move') moveSel(drag.dx, drag.dy, drag.alt)
-    if (drag?.kind === 'corner' && drag.r > 0) applyCorners(drag.r, cornerKind, drag.single ? [[drag.ci, drag.pi]] : cornerWidgets.map(w => [w.ci, w.pi]))
+    if (drag?.kind === 'corner' && drag.sharpen) {
+      const w0 = cornerWidgets.find(q => q.ci === drag.ci && q.pi === drag.pi)
+      if (drag.r !== (w0?.rounded ?? -1)) {
+        localStorage.setItem('forge.cornerKind', cornerKind)
+        edit('round_corners', { radius: drag.r, corner: cornerKind, sharpen: true, points: drag.single ? [[drag.ci, drag.pi]] : [...sel].map(unkey) })
+      }
+    } else if (drag?.kind === 'corner' && (liveOn ? drag.r !== liveOn.r : drag.r > 0)) applyCorners(drag.r, cornerKind, drag.single ? [[drag.ci, drag.pi]] : cornerWidgets.map(w => [w.ci, w.pi]))
     if (drag?.kind === 'shape') {
       const r = shapeBox(drag)
       if (r.w >= 2 && r.h >= 2) setJustDrawn({ ...drag, oval: active === 'oval' })
