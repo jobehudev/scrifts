@@ -27,7 +27,7 @@ export function NumField({ label, value, onCommit: commit, disabled, wide, min, 
     if (draft.trim() !== '' && Number.isFinite(n) && n !== value) onCommit(n)
   }
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center ${buttons ? 'gap-0.5' : 'gap-2'}`}>
       {!hideLabel && <span onPointerDown={scrub.bind.onPointerDown} onPointerMove={scrub.bind.onPointerMove} onPointerUp={scrub.bind.onPointerUp} title={scrub.bind.title}
         className={`${wide ? 'w-14' : 'w-4'} shrink-0 text-muted-foreground ${scrub.bind.className}`}>{label}</span>}
       {buttons && <button type="button" disabled={disabled || (min !== undefined && value <= min)} aria-label={`${label}: one less`} title="One less (Shift: 10, Alt: 0.1)"

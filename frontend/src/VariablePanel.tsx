@@ -69,7 +69,7 @@ export function VariablePanel({ font, vv, pickSave, run, onSplit }: {
             <Slider min={a.min} max={a.max} step={a.max - a.min > 20 ? 1 : (a.max - a.min) / 400}
               value={[values[a.tag] ?? a.default]} onValueChange={v => setValues(s => ({ ...s, [a.tag]: v[0] }))}
               onDoubleClick={() => setValuesNow(s => ({ ...s, [a.tag]: a.default }))} />
-            <AxisTicks axis={a} vv={vv} />
+            <AxisTicks axis={a} drawn={keyframes.map(k => k.location[a.tag]).filter((v): v is number => v !== undefined)} steps={vv.stepTag === a.tag && (playing || preparing) ? vv.steps : []} />
           </div>
         ))}
       </div>

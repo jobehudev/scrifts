@@ -50,8 +50,8 @@ export function useVariableState(font: FontInfo | null, onLocation: (l: Location
   const lo = a0?.min ?? 0, hi = a0?.max ?? 0
   const frames = useMemo(() => {
     if (!a0 || hi <= lo) return []
-    const n = 4 * FPS
-    return Array.from({ length: n }, (_, i) => Math.round(lo + (hi - lo) * (0.5 - 0.5 * Math.cos((i / n) * Math.PI * 2))))
+    const half = 2 * FPS  // up for two seconds, down for two: even steps, so the ticks under the slider are evenly spaced
+    return Array.from({ length: 2 * half }, (_, i) => Math.round(lo + (hi - lo) * (i <= half ? i / half : (2 * half - i) / half)))
   }, [a0, lo, hi])
   const togglePlay = async () => {
     if (playing || preparing) { stop(); return }
@@ -78,22 +78,21 @@ export function useVariableState(font: FontInfo | null, onLocation: (l: Location
 export type VariableState = ReturnType<typeof useVariableState>
 
 /**
- * Tick marks under an axis slider: tall ones on the round numbers (every 100 on a wide axis) and where the font was drawn
- * (in the accent colour), short ones on the positions Play steps through (on the axis Play sweeps).
+ * Tick marks under an axis slider, kept quiet: a hairline on every round number (every 100 on a wide axis), a taller accent
+ * mark where the font was drawn (`drawn`), and while Play runs a faint dot for each position it steps through (`steps`).
  */
-export function AxisTicks({ axis, vv }: { axis: { tag: string; min: number; max: number }; vv: VariableState }) {
+export function AxisTicks({ axis, drawn, steps }: { axis: { tag: string; min: number; max: number }; drawn: number[]; steps: number[] }) {
   const span = axis.max - axis.min
   if (span <= 0) return null
   const at = (v: number) => `calc(8px + (100% - 16px) * ${(v - axis.min) / span})`  // the thumb is 16 px wide: its centre never reaches the ends
   const big: number[] = []
   if (span >= 300) for (let v = Math.ceil(axis.min / 100) * 100; v <= axis.max; v += 100) big.push(v)
-  const drawn = vv.keyframes.map(k => k.location[axis.tag]).filter((v): v is number => v !== undefined)
-  const small = vv.stepTag === axis.tag ? vv.steps.filter(v => !big.includes(v) && !drawn.includes(v)) : []
+  const small = steps.filter(v => !big.includes(v) && !drawn.includes(v))
   return (
-    <div aria-hidden className="pointer-events-none relative h-2 w-full">
-      {small.map(v => <span key={'s' + v} className="absolute top-0 h-1 w-px bg-muted-foreground/40" style={{ left: at(v) }} />)}
-      {big.filter(v => !drawn.includes(v)).map(v => <span key={'b' + v} className="absolute top-0 h-2 w-px bg-muted-foreground/70" style={{ left: at(v) }} />)}
-      {drawn.map(v => <span key={'d' + v} className="absolute top-0 h-2 w-0.5 -translate-x-px bg-primary" style={{ left: at(v) }} />)}
+    <div aria-hidden className="pointer-events-none relative h-2.5 w-full">
+      {small.map(v => <span key={'s' + v} className="absolute top-0 h-1 w-px -translate-x-1/2 bg-muted-foreground/35" style={{ left: at(v) }} />)}
+      {big.filter(v => !drawn.includes(v)).map(v => <span key={'b' + v} className="absolute top-0 h-1.5 w-px -translate-x-1/2 bg-muted-foreground/50" style={{ left: at(v) }} />)}
+      {drawn.map(v => <span key={'d' + v} className="absolute top-0 h-2.5 w-0.5 -translate-x-1/2 rounded-full bg-primary" style={{ left: at(v) }} />)}
     </div>
   )
 }
@@ -125,7 +124,7 @@ export function VariableBar({ font, vv, onSplit, busy }: { font: FontInfo; vv: V
             <div className="w-32">
               <input type="range" min={a.min} max={a.max} step={a.max - a.min > 20 ? 1 : (a.max - a.min) / 400} value={values[a.tag] ?? a.default} aria-label={`Preview ${a.name}`}
                 onChange={e => setValues(s => ({ ...s, [a.tag]: Number(e.target.value) }))} className="block w-full accent-primary" />
-              <AxisTicks axis={a} vv={vv} />
+              <AxisTicks axis={a} drawn={keyframes.map(k => k.location[a.tag]).filter((v): v is number => v !== undefined)} steps={vv.stepTag === a.tag && (playing || preparing) ? vv.steps : []} />
             </div>
             <div className="w-36"><NumField hideLabel buttons label={a.name} min={a.min} max={a.max} value={Math.round(values[a.tag] ?? a.default)}
               onCommit={n => setValuesNow(s => ({ ...s, [a.tag]: n }))} /></div>

@@ -28,6 +28,7 @@ const AccentView = lazy(() => import('./AccentView').then(m => ({ default: m.Acc
 const FeaturesView = lazy(() => import('./FeaturesView').then(m => ({ default: m.FeaturesView })))
 const ScriptView = lazy(() => import('./ScriptView').then(m => ({ default: m.ScriptView })))
 import { VariableBar, useVariableState } from './VariableBar'
+import { FamilyPanel } from './FamilyPanel'
 const VariablePanel = lazy(() => import('./VariablePanel').then(m => ({ default: m.VariablePanel })))
 const SmartPanel = lazy(() => import('./SmartPanel').then(m => ({ default: m.SmartPanel })))
 const PropertiesPanel = lazy(() => import('./PropertiesPanel').then(m => ({ default: m.PropertiesPanel })))
@@ -206,7 +207,7 @@ export default function App() {
   }, [settings.theme, settings.custom])
   const dockRef = useRef<DockHandle | null>(null)
   const [openPanels, setOpenPanels] = useState<string[]>([])
-  const hasAxes = (font?.axes.length ?? 0) > 0
+  const hasAxes = (font?.axes.length ?? 0) > 0 || !!family
   // a variable font needs its axes panel; open it if the saved layout has none
   const axesEnsured = useRef<string | null>(null)  // once per font, so closing the panel by hand sticks
   useEffect(() => {
@@ -760,7 +761,11 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       : <p className="p-3 text-xs text-muted-foreground">{loc ? 'Move the axes back to their defaults to edit smart parts.' : 'Select a glyph.'}</p>
     return font.axes.length
       ? <VariablePanel key={font.path} font={font} vv={vv} pickSave={initial => pick('save', initial)} run={run} onSplit={splitVariable} />
-      : <p className="p-3 text-xs text-muted-foreground">This font has no variable axes.</p>
+      : family
+        ? <FamilyPanel family={family} current={font.path} weight={weight} onWeight={setWeight} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))}
+            onSwitch={switchMaster} onAddHere={() => { setFamilyDialog('blend'); setFamilyOpen(true) }} onAddAxis={() => setAxisOpen(true)} onAddMaster={() => { setFamilyDialog('add'); setFamilyOpen(true) }}
+            check={check} onCheck={() => setCheckOpen(true)} busy={!!busy} />
+        : <p className="p-3 text-xs text-muted-foreground">This font has no variable axes.</p>
   }
 
   const renderView = (v: string) => !font ? null : ['grid', 'layers', 'properties', 'info', 'history', 'shapes', 'smart', 'variable', 'compare'].includes(v) ? renderTool(v) : (
@@ -831,7 +836,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
             {family && <MasterBar family={family} current={font.path} onSwitch={switchMaster} onRemove={setRemoving} onEdit={setEditingMaster} onAdd={() => { setFamilyDialog('add'); setFamilyOpen(true) }} busy={!!busy}
               check={check} onCheck={() => setCheckOpen(true)}
               weight={weight} onWeight={setWeight} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))} onAddAxis={() => setAxisOpen(true)} glyph={sel} onAddBrace={addBrace} onRemoveBrace={removeBrace} onAddHere={() => { setFamilyDialog('blend'); setFamilyOpen(true) }} />}
-            <div className="min-h-0 flex-1"><Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading the workspace…</p>}><Dock render={renderView} onActive={setView} onOpen={setOpenPanels} handle={dockRef} axes={font.axes.length > 0} layersEl={layersEl} /></Suspense></div>
+            <div className="min-h-0 flex-1"><Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading the workspace…</p>}><Dock render={renderView} onActive={setView} onOpen={setOpenPanels} handle={dockRef} axes={font.axes.length > 0 || !!family} layersEl={layersEl} /></Suspense></div>
           </main>
         ) : (
           <main className="grid min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden md:grid-cols-[5fr_7fr]">
