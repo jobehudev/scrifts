@@ -12,6 +12,25 @@ Get the Windows installer from the [latest release](https://github.com/jobehudev
 It installs for your user only (no admin needed) and contains everything: FontForge's engine is bundled, so there is
 nothing else to install and nothing to compile. The rest of this page is for people who want to work on Scrifts.
 
+## What it looks like
+
+![The glyph editor: one glyph with its points, the Layers panel and the glyph grid](docs/editor.png)
+
+Draw and edit outlines with points and shapes; the Layers panel lists the shapes, anchors and guides of the glyph.
+
+![A glyph previewed at weight 650, blended from the Regular and Black masters](docs/weight.png)
+
+Masters make a variable family: the weight slider previews any weight between them, and "Add master here" turns that
+blend into a master of its own.
+
+![Accents: placing an acute over the e, with every letter that uses it listed below](docs/accents.png)
+
+Place an accent once and see it on every letter that uses it.
+
+![Compare masters: two masters side by side with the points that do not match marked in red](docs/compare.png)
+
+When masters will not blend, Scrifts shows which points differ and offers the fix.
+
 ## Make it yours
 
 ![The same glyph in four looks: dark, light, light grey and green](docs/themes.png)
