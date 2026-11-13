@@ -309,11 +309,11 @@ export function LayersPanel({ pts, quadratic, selected, editable, hidden, locked
           </form>
         )}
 
-        <Head title="Shadow letter" tip="Another letter drawn faintly behind this one, from the same origin, to match spacing (É against E). Type a letter, /name or U+XXXX. Left empty it is the base letter of an accented glyph.">
+        <Head title="Shadow letter" tip="Another letter drawn faintly behind this one, from the same origin, to match spacing (É against E). Type a letter, /name or U+XXXX. Left empty it is the base letter of an accented glyph, or else this glyph's own character in the system font (to see how it is written).">
           <Switch checked={vis.shadow} onCheckedChange={on => onVis({ ...vis, shadow: on })} label="Show the shadow letter" />
         </Head>
         <div className={row}>
-          <Input key={shadowName ?? ''} defaultValue={shadowName ?? ''} placeholder={autoShadow ? `${autoShadow} (the base letter)` : 'Letter, /name or U+XXXX'} aria-label="Shadow letter"
+          <Input key={shadowName ?? ''} defaultValue={shadowName ?? ''} placeholder={autoShadow ? `${autoShadow} (the base letter)` : 'This letter in the system font, or type one'} aria-label="Shadow letter"
             title="A letter, /name or U+XXXX; empty = the base letter (É → E)"
             onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
             onBlur={e => { onShadow(e.target.value); if (e.target.value.trim() !== '' && !vis.shadow) onVis({ ...vis, shadow: true }) }}

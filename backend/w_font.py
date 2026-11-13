@@ -532,7 +532,7 @@ def op_close():
 # Known limit: a whole-font save per step (about 0.3 s at 5000 glyphs) and the glyphs' own undo history does not
 # survive the undo; a journal of inverse operations per op if that ever hurts.
 
-FONT_WIDE = {"run_plugin": "the plugin run", "run_script": "the script run", "rename_glyph": "the rename",
+FONT_WIDE = {"run_plugin": "the plugin run", "run_script": "the script run", "rename_glyph": "the rename", "delete_glyph": "the glyph removal",
              "standard_names": "the standard names", "set_features": "the feature change", "edit_group": "the kerning group change",
              "import_artboards": "the artboard import", "create_many": "the added glyphs", "make_glyphs": "the new glyphs", "place_by_anchors": "the accent placement",
              "repair_stray": "the repair", "apply_metrics_keys": "the spacing update", "fix_problem": "the fix",

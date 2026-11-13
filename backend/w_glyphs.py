@@ -84,6 +84,17 @@ def op_rename_glyph(old, new):
     return {"name": new}
 
 
+def op_delete_glyph(name):
+    """Take a glyph out of the font, so its slot is unused again. Refused while other glyphs are built from it."""
+    if name not in state.FONT:
+        raise ValueError(f"No glyph called {name}")
+    users = [g.glyphname for g in state.FONT.glyphs() if g.glyphname != name and any(r[0] == name for r in g.references)]
+    if users:
+        raise ValueError(f"{name} is a component of {', '.join(users[:5])}{' ...' if len(users) > 5 else ''}: unlink or delete those first")
+    state.FONT.removeGlyph(name)
+    return {"deleted": name}
+
+
 def op_make_dotless(unicode):
     """Dotless i (U+0131) from i, or dotless j (U+0237) from j: the letter copied without its highest
     shape (the dot), with the same width and anchors, so accents can sit where the dot was."""

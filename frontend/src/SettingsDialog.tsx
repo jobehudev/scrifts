@@ -160,6 +160,7 @@ export function SettingsDialog({ open, onOpenChange, fontName, onRefreshUiFont }
                 <p className="text-muted-foreground">An open source font editor, built on FontForge.</p>
                 <p>Free software under the GNU General Public License, version 3 or later. You may use, study, change and share it; your version stays under the same licence and comes with its source.</p>
                 <p className="text-muted-foreground">Fonts are read, written and edited by FontForge (GPL-3.0-or-later) and fontTools (MIT). The Windows installer carries FontForge's own build, unchanged. More in CREDITS.md.</p>
+                <p className="text-muted-foreground">Made by jobehudev.</p>
                 <p className="font-mono text-xs text-muted-foreground">github.com/jobehudev/scrifts</p>
               </div>
             ) : shown.map(i => (

@@ -492,6 +492,15 @@ def glyph_rename(req: RenameReq):
     return _call("rename_glyph", fid=req.fid, old=req.old, new=req.new)
 
 
+class DeleteReq(FontReq):
+    name: str
+
+
+@app.post("/api/glyph-delete")
+def glyph_delete(req: DeleteReq):
+    return _call("delete_glyph", fid=req.fid, name=req.name)
+
+
 @app.get("/api/unicode-of")
 def unicode_of(fid: int, name: str):
     return {"unicode": _call("unicode_of", fid=fid, name=name)}

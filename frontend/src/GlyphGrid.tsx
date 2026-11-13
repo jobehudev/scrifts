@@ -317,6 +317,8 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
               <ContextMenuItem onSelect={() => void rebuildGlyph(ctxName)}>Rebuild from Components</ContextMenuItem>
               <ContextMenuItem onSelect={() => api('/api/glyphs/restore', { names: [ctxName] })
                 .then(() => { onChanged?.(); toast(`Restored ${ctxName} to the last saved version`) }).catch(fail)}>Restore to Last Saved</ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem variant="destructive" onSelect={() => { if (window.confirm(`Remove ${ctxName} from the font? Its slot becomes unused again. Edit, Undo Last Font-Wide Change takes it back.`)) api('/api/glyph-delete', { name: ctxName }).then(() => { onChanged?.(); toast(`Removed ${ctxName}`, { description: 'Ctrl Alt Z takes it back.' }) }).catch(fail) }}>Delete Glyph</ContextMenuItem>
               {masterOps && masterOps.others.length > 0 && <>
                 <ContextMenuSeparator />
                 <ContextMenuSub>

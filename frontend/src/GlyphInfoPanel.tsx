@@ -75,6 +75,14 @@ export function GlyphInfoPanel({ font, sel, onSelect, onChanged }: { font: FontI
       toast.success(`Renamed ${sel} to ${r.name}`, { description: 'Components, kerning and features follow the new name.' })
     } catch (e) { toast.error('Could not rename', { description: (e as Error).message }) }
   }
+  const remove = async () => {
+    if (!sel || !window.confirm(`Remove ${sel} from the font? Its slot becomes unused again. Edit, Undo Last Font-Wide Change takes it back.`)) return
+    try {
+      await api('/api/glyph-delete', { name: sel })
+      onChanged()
+      toast.success(`Removed ${sel}`, { description: 'Edit, Undo Last Font-Wide Change (Ctrl Alt Z) takes it back.' })
+    } catch (e) { toast.error('Could not remove', { description: (e as Error).message }) }
+  }
   const nameOf = (c: number) => font.glyphs.find(g => g.unicode === c)?.name
   const add = async (ids: string[], label: string) => {
     setBusy(true)
@@ -104,6 +112,7 @@ export function GlyphInfoPanel({ font, sel, onSelect, onChanged }: { font: FontI
           <form className="flex gap-1" onSubmit={e => { e.preventDefault(); void rename() }}>
             <Input className="h-7 font-mono" value={newName} onChange={e => setNewName(e.target.value)} aria-label="Glyph name" />
             <Button size="xs" type="submit" variant="secondary" disabled={!newName.trim() || newName === sel}>Rename</Button>
+            <Button size="xs" type="button" variant="outline" onClick={() => void remove()} title="Remove this glyph from the font">Delete</Button>
           </form>
         )}
         {!glyph ? <p className="text-muted-foreground">Select a glyph.</p>
