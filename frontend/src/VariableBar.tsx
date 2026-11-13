@@ -73,9 +73,30 @@ export function useVariableState(font: FontInfo | null, onLocation: (l: Location
     }, 1000 / FPS)
     return () => window.clearInterval(id)
   }, [playing, a0, frames])
-  return { values, setValues, setValuesNow, defaults, playing, preparing, togglePlay, stop, keyframes, canPlay: !!a0 && hi > lo }
+  return { values, setValues, setValuesNow, defaults, playing, preparing, togglePlay, stop, keyframes, canPlay: !!a0 && hi > lo, steps: [...new Set(frames)], stepTag: a0?.tag ?? '' }
 }
 export type VariableState = ReturnType<typeof useVariableState>
+
+/**
+ * Tick marks under an axis slider: tall ones on the round numbers (every 100 on a wide axis) and where the font was drawn
+ * (in the accent colour), short ones on the positions Play steps through (on the axis Play sweeps).
+ */
+export function AxisTicks({ axis, vv }: { axis: { tag: string; min: number; max: number }; vv: VariableState }) {
+  const span = axis.max - axis.min
+  if (span <= 0) return null
+  const at = (v: number) => `calc(8px + (100% - 16px) * ${(v - axis.min) / span})`  // the thumb is 16 px wide: its centre never reaches the ends
+  const big: number[] = []
+  if (span >= 300) for (let v = Math.ceil(axis.min / 100) * 100; v <= axis.max; v += 100) big.push(v)
+  const drawn = vv.keyframes.map(k => k.location[axis.tag]).filter((v): v is number => v !== undefined)
+  const small = vv.stepTag === axis.tag ? vv.steps.filter(v => !big.includes(v) && !drawn.includes(v)) : []
+  return (
+    <div aria-hidden className="pointer-events-none relative h-2 w-full">
+      {small.map(v => <span key={'s' + v} className="absolute top-0 h-1 w-px bg-muted-foreground/40" style={{ left: at(v) }} />)}
+      {big.filter(v => !drawn.includes(v)).map(v => <span key={'b' + v} className="absolute top-0 h-2 w-px bg-muted-foreground/70" style={{ left: at(v) }} />)}
+      {drawn.map(v => <span key={'d' + v} className="absolute top-0 h-2 w-0.5 -translate-x-px bg-primary" style={{ left: at(v) }} />)}
+    </div>
+  )
+}
 
 export const atKeyframe = (vv: VariableState, k: Keyframe) => Object.entries(vv.defaults).every(([t, d]) => Math.abs((vv.values[t] ?? d) - (k.location[t] ?? d)) < 0.5)
 
@@ -101,8 +122,11 @@ export function VariableBar({ font, vv, onSplit, busy }: { font: FontInfo; vv: V
       <div className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 px-2 py-0.5">
         {font.axes.map((a, i) => (
           <label key={a.tag} className="flex items-center gap-1.5 text-muted-foreground" title={a.name}>{i === 0 ? a.name : a.tag}
-            <input type="range" min={a.min} max={a.max} step={a.max - a.min > 20 ? 1 : (a.max - a.min) / 400} value={values[a.tag] ?? a.default} aria-label={`Preview ${a.name}`}
-              onChange={e => setValues(s => ({ ...s, [a.tag]: Number(e.target.value) }))} className="w-32 accent-primary" />
+            <div className="w-32">
+              <input type="range" min={a.min} max={a.max} step={a.max - a.min > 20 ? 1 : (a.max - a.min) / 400} value={values[a.tag] ?? a.default} aria-label={`Preview ${a.name}`}
+                onChange={e => setValues(s => ({ ...s, [a.tag]: Number(e.target.value) }))} className="block w-full accent-primary" />
+              <AxisTicks axis={a} vv={vv} />
+            </div>
             <div className="w-36"><NumField hideLabel buttons label={a.name} min={a.min} max={a.max} value={Math.round(values[a.tag] ?? a.default)}
               onCommit={n => setValuesNow(s => ({ ...s, [a.tag]: n }))} /></div>
           </label>

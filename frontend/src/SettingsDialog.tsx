@@ -1,3 +1,4 @@
+import { AboutContent } from './AboutContent'
 import { useState, type ReactNode } from 'react'
 import { Info, Minus, Palette, PenTool, Plus, RotateCcw, Search, Settings2, X } from 'lucide-react'
 import { ColorPicker } from './ColorPicker'
@@ -155,14 +156,7 @@ export function SettingsDialog({ open, onOpenChange, fontName, onRefreshUiFont }
             ) : cat === 'about' ? null : <h2 className="mb-1 text-lg font-semibold tracking-tight">{label(cat)}</h2>}
 
             {!query && cat === 'about' ? (
-              <div className="space-y-3 text-sm">
-                <h2 className="text-lg font-semibold tracking-tight">Scrifts</h2>
-                <p className="text-muted-foreground">An open source font editor, built on FontForge.</p>
-                <p>Free software under the GNU General Public License, version 3 or later. You may use, study, change and share it; your version stays under the same licence and comes with its source.</p>
-                <p className="text-muted-foreground">Fonts are read, written and edited by FontForge (GPL-3.0-or-later) and fontTools (MIT). The Windows installer carries FontForge's own build, unchanged. More in CREDITS.md.</p>
-                <p className="text-muted-foreground">Made by jobehudev.</p>
-                <p className="font-mono text-xs text-muted-foreground">github.com/jobehudev/scrifts</p>
-              </div>
+              <AboutContent />
             ) : shown.map(i => (
               <section key={i.id} className="border-b py-4 last:border-b-0">
                 <h3 className="text-sm font-semibold">{query && <span className="font-normal text-muted-foreground">{label(i.cat)}: </span>}{i.label}</h3>

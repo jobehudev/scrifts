@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState } from 'react'
-import { api } from './api'
+import { AboutContent } from './AboutContent'
+import { Fragment, useState } from 'react'
 import { command, type Command } from './commands'
 import { ago, ext, type Recent } from './recent'
 import { TOOLS, VIEWS } from './panels'
@@ -39,12 +39,6 @@ const SHORTCUTS: [string, string][] = [
 
 /** File, Edit, View, Glyph, Font, Help. Same look as the rest of the chrome. */
 /** GitHub's mark (lucide no longer ships brand icons). */
-const GithubMark = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-    <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.1.9 2.3v3.3c0 .3.1.7.8.6A12 12 0 0 0 12 .3" />
-  </svg>
-)
-
 export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, onFamily, onGenerate, onValidate, onFixNames, onUndoFont, onProof, onSettings, onNew, onOpen, onOpenPath, onClearRecent, onSave, onSaveAs,
   onClose, comparing, onCompare, onExit, busy, openPanels, onTogglePanel, onResetLayout, onWorkspace, onInterpolate, onExportGlyphs, plugins, onRunPlugin, onOpenPlugins, onLoadPlugins, onWelcome, onArtboards, onTrace, onSheet }: {
   hasFont: boolean; editing: boolean; view: string; onView: (v: string) => void
@@ -59,13 +53,8 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
   onWelcome: () => void; onArtboards: (m: 'export' | 'import') => void; onTrace: () => void; onSheet: () => void
 }) {
   const [dialog, setDialog] = useState<'keys' | 'about' | null>(null)
-  const [ffVersion, setFfVersion] = useState<string | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const aids = useProps()?.vis
-  useEffect(() => {
-    if (dialog === 'about' && !ffVersion) api<{ fontforge: string }>('/api/ping').then(r => setFfVersion(r.fontforge)).catch(() => {})
-  }, [dialog, ffVersion])
-
   const trig = 'h-7 px-2 text-sm font-normal'
   const off = !hasFont || busy
 
@@ -363,26 +352,8 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
 
       <Dialog open={dialog === 'about'} onOpenChange={o => !o && setDialog(null)}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            {/* the wordmark as a mask, so it takes the text colour of every theme */}
-            <div role="img" aria-label="Scrifts" className="mb-2 h-9 w-full max-w-72 bg-foreground"
-              style={{ WebkitMask: 'url(/wordmark.svg) left center / contain no-repeat', mask: 'url(/wordmark.svg) left center / contain no-repeat' }} />
-            <DialogTitle className="sr-only">Scrifts</DialogTitle>
-            <DialogDescription>Open source font editor</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 text-sm">
-            <p>Scrifts is built on <b>FontForge</b>{ffVersion ? ` (build ${ffVersion})` : ''}: all reading, writing and outline work is done by its engine. Variable fonts are made with <b>fontTools</b>; Glyphs files are read with glyphsLib.</p>
-            <div className="flex flex-wrap gap-2">
-              {['fontforge/fontforge', 'fonttools/fonttools', 'googlefonts/glyphsLib'].map(repo => (
-                <button key={repo} type="button" title={`github.com/${repo}`}
-                  onClick={() => { const u = `https://github.com/${repo}`; void api('/api/open-url', { url: u }).catch(() => window.open(u, '_blank')) }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground py-1 pr-3 pl-1.5 text-xs font-medium text-background hover:opacity-85">
-                  <GithubMark className="size-4" />/{repo.split('/')[1].toLowerCase()}
-                </button>
-              ))}
-            </div>
-            <p className="text-muted-foreground">Thanks to their authors. Licensed GPL-3.0-or-later, like FontForge. Full credits in CREDITS.md.</p>
-          </div>
+          <DialogHeader className="sr-only"><DialogTitle>Scrifts</DialogTitle><DialogDescription>About Scrifts</DialogDescription></DialogHeader>
+          <AboutContent />
         </DialogContent>
       </Dialog>
     </>

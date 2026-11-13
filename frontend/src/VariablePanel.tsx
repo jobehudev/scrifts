@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import { Download, Layers, Loader2, Pause, Play, RotateCcw } from 'lucide-react'
 import { api, type FontInfo } from './api'
-import { atKeyframe, type VariableState } from './VariableBar'
+import { atKeyframe, AxisTicks, type VariableState } from './VariableBar'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { NumField } from './NumField'
@@ -69,6 +69,7 @@ export function VariablePanel({ font, vv, pickSave, run, onSplit }: {
             <Slider min={a.min} max={a.max} step={a.max - a.min > 20 ? 1 : (a.max - a.min) / 400}
               value={[values[a.tag] ?? a.default]} onValueChange={v => setValues(s => ({ ...s, [a.tag]: v[0] }))}
               onDoubleClick={() => setValuesNow(s => ({ ...s, [a.tag]: a.default }))} />
+            <AxisTicks axis={a} vv={vv} />
           </div>
         ))}
       </div>
