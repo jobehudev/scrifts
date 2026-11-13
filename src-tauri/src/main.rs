@@ -57,7 +57,7 @@ fn spawn_backend(port: u16) -> Result<Child, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let exe_dir = exe.parent().ok_or("cannot determine executable directory")?;
 
-    // 1. Packaged sidecar next to Forge.exe (or in forge-backend/ subfolder)
+    // 1. Packaged sidecar next to the app exe (or in forge-backend/ subfolder)
     for candidate in [
         exe_dir.join("forge-backend.exe"),
         exe_dir.join("forge-backend").join("forge-backend.exe"),
