@@ -2115,3 +2115,11 @@ def test_split_keeps_the_in_between_master(client, tmp_path):
     fam = client.get("/api/family", params={"path": r["designspace"]}).json()
     assert [m["weight"] for m in fam["masters"]] == [100, 400, 1000]  # gvar peaks at 400 as well as at the end
     assert not client.get("/api/family/check", params={"path": r["designspace"]}).json()["glyphs"]
+
+
+@pytest.mark.skipif(not CONSOLE.exists(), reason="font not on this machine")
+def test_blend_draws_glyphs_made_of_components(client, tmp_path):
+    info = client.post("/api/open", json={"path": str(CONSOLE)}).json()
+    r = client.post("/api/family/split", json={"fid": info["fid"], "path": str(tmp_path / "Comp")}).json()
+    b = client.post("/api/family/blend", json={"path": r["designspace"], "weight": 250, "names": ["nine"]}).json()
+    assert b["nine"] and b["nine"]["contours"] and b["nine"]["refs"] == []  # a nine is a six turned round: nothing to draw without its component

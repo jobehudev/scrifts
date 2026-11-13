@@ -338,7 +338,38 @@ def family_blend(req: BlendReq):
     fam = _family(req.path)
     if len(fam["masters"]) < 2:
         raise HTTPException(400, "a family needs two masters to blend")
-    return _blend(fam, _master_data(fam, req.names), _at(fam, req.weight, req.location), _brace_data(fam, req.names))
+    # a glyph made of components (a nine turned from a six) has no contours of its own: blend what it is made of as well, then draw it out
+    at = _at(fam, req.weight, req.location)
+    if req.names is None:  # every glyph: the components are in there already
+        out = _blend(fam, _master_data(fam), at, _brace_data(fam))
+        return {n: _flatten(out, n) for n in out}
+    names = set(req.names)
+    for _ in range(4):
+        data = _master_data(fam, sorted(names))
+        more = {r[0] for d in data for g in d.values() for r in g["refs"]} - names
+        if not more:
+            break
+        names |= more
+    out = _blend(fam, data, at, _brace_data(fam, sorted(names)))
+    return {n: _flatten(out, n) for n in req.names if n in out}
+
+
+def _flatten(out, name, depth=0):
+    """A blended glyph with its components drawn into its own contours (the matrix is FontForge's: x' = a x + c y + e, y' = b x + d y + f)."""
+    g = out.get(name)
+    if g is None:
+        return None
+    contours, closed = [list(map(list, c)) for c in g["contours"]], list(g["closed"])
+    if depth < 8:
+        for ref, m in g["refs"]:
+            base = _flatten(out, ref, depth + 1)
+            if base is None:
+                continue
+            a, b, c, d, e, f = m
+            for pc, cl in zip(base["contours"], base["closed"]):
+                contours.append([[a * p[0] + c * p[1] + e, b * p[0] + d * p[1] + f, *p[2:]] for p in pc])
+                closed.append(cl)
+    return {**g, "contours": contours, "closed": closed, "refs": []}
 
 
 class PointEditReq(BaseModel):
