@@ -180,6 +180,7 @@ export class OutlineStore {
     if (this.pending.has(k)) return this.last.get(name)
     const gone = this.missing.get(k)
     if (gone !== undefined && Date.now() - gone < 5000) return undefined
+    if (!this.fid && !session.fid) return this.last.get(name)  // between two fonts (a master switch): nothing can be asked yet; the new font's first draw asks
     this.pending.add(k)
     const lk = locKey(loc)
     if (!this.wanted.has(lk)) this.wanted.set(lk, { names: new Set(), loc })
@@ -225,8 +226,11 @@ export class OutlineStore {
           if (!this.cache.has(k)) this.missing.set(k, Date.now())  // asked for, not sent: do not ask again at once
         }
         this.emit()
-      } catch {
-        for (const n of list) { const k = locKey(loc) + '|' + n; this.pending.delete(k); this.missing.set(k, Date.now()) }
+      } catch (e) {
+        // the answer was for a font this page has since replaced (or the call was cancelled): not the glyphs' fault, so ask again as soon as they are drawn
+        // (marking them missing would leave them blank for five seconds, e.g. right after switching masters)
+        const gone = (e as Error).name === 'AbortError'
+        for (const n of list) { const k = locKey(loc) + '|' + n; this.pending.delete(k); if (!gone) this.missing.set(k, Date.now()) }
       }
     }
   }
