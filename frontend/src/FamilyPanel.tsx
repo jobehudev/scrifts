@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Layers, Loader2, Pause, Play, Plus, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import { AxisTicks, FPS } from './VariableBar'
+import { AxisTicks } from './VariableBar'
+import type { FamilyPlay } from './familyPlay'
 import { NumField } from './NumField'
 import { samePath, type Check, type Family, type Master } from './FamilyBar'
 
@@ -10,9 +10,10 @@ import { samePath, type Check, type Family, type Master } from './FamilyBar'
  * The Axes panel of a family of masters (the counterpart of the variable-font panel): the same sliders, ticks and Play, with the
  * masters as the places the family was drawn. Sharing its state with the family bar above the views.
  */
-export function FamilyPanel({ family, current, weight, onWeight, axisVals, onAxis, onSwitch, onAddHere, onAddAxis, onAddMaster, check, onCheck, busy }: {
+export function FamilyPanel({ family, current, weight, onWeight, play, axisVals, onAxis, onSwitch, onAddHere, onAddAxis, onAddMaster, check, onCheck, busy }: {
   family: Family; current: string
-  weight: number | null; onWeight: (w: number | null) => void
+  weight: number | null; onWeight: (w: number | null, instant?: boolean) => void
+  play: FamilyPlay
   axisVals: Record<string, number>; onAxis: (name: string, v: number) => void
   onSwitch: (m: Master) => void; onAddHere: () => void; onAddAxis: () => void; onAddMaster: () => void
   check: Check | null; onCheck: () => void; busy: boolean
@@ -22,27 +23,11 @@ export function FamilyPanel({ family, current, weight, onWeight, axisVals, onAxi
   const at = (name: string) => axisVals[name] ?? family.axes.find(a => a.name === name)!.default
   const here = weight ?? ax?.default ?? 0
   const between = weight !== null && !family.masters.some(m => family.axes.every(a => (m.location[a.name] ?? a.default) === (a.name === ax.name ? here : at(a.name))))
-  // play: the weight sweeps from end to end and back in 4 seconds, FPS steps a second
-  const [playing, setPlaying] = useState(false)
-  const frames = useMemo(() => {
-    if (!ax || ax.max <= ax.min) return []
-    const half = 2 * FPS
-    return Array.from({ length: 2 * half }, (_, i) => Math.round(ax.min + (ax.max - ax.min) * (i <= half ? i / half : (2 * half - i) / half)))
-  }, [ax])
-  useEffect(() => {
-    if (!playing || !frames.length) return
-    let i = 0
-    const id = window.setInterval(() => {
-      if (i >= frames.length) { window.clearInterval(id); onWeight(null); setPlaying(false); return }
-      onWeight(frames[i++])
-    }, 1000 / FPS)
-    return () => window.clearInterval(id)
-  }, [playing, frames, onWeight])
-  const slider = (name: string, label: string, min: number, max: number, value: number, set: (n: number) => void, drawn: number[], steps: number[]) => (
+  const slider = (name: string, label: string, min: number, max: number, value: number, set: (n: number, instant?: boolean) => void, drawn: number[], steps: number[]) => (
     <div key={name} className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-xs">
         <span>{label}</span>
-        <div className="w-36"><NumField hideLabel buttons label={label} min={min} max={max} value={Math.round(value)} onCommit={n => set(Math.round(n))} /></div>
+        <div className="w-36"><NumField hideLabel buttons label={label} min={min} max={max} value={Math.round(value)} onCommit={n => set(Math.round(n), true)} /></div>
       </div>
       <Slider min={min} max={max} step={1} value={[value]} onValueChange={v => set(v[0])} />
       <AxisTicks axis={{ tag: name, min, max }} drawn={drawn} steps={steps} />
@@ -53,15 +38,17 @@ export function FamilyPanel({ family, current, weight, onWeight, axisVals, onAxi
       <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="text-xs font-medium text-muted-foreground">Axes</span>
         <div className="flex items-center gap-1">
-          {family.masters.length > 1 && <Button size="icon-xs" variant={playing ? 'secondary' : 'ghost'} aria-pressed={playing} aria-label={playing ? 'Stop the animation' : 'Play: sweep the weight'}
-            title={playing ? 'Stop' : 'Play: watch the shapes change from the lightest to the heaviest and back'} onClick={() => setPlaying(p => !p)}>{playing ? <Pause /> : <Play />}</Button>}
-          <Button size="xs" variant="ghost" onClick={() => { setPlaying(false); onWeight(null) }}><RotateCcw />Default</Button>
+          {play.can && <Button size="icon-xs" variant={play.playing || play.preparing ? 'secondary' : 'ghost'} aria-pressed={play.playing || play.preparing}
+            aria-label={play.playing ? 'Stop the animation' : play.preparing ? 'Getting ready: click to cancel' : 'Play: sweep the weight'}
+            title={play.playing ? 'Stop' : play.preparing ? 'Getting every weight ready first: click to cancel' : 'Play: gets every weight ready, then shows the shapes changing from the lightest to the heaviest and back'}
+            onClick={() => void play.toggle()}>{play.playing ? <Pause /> : play.preparing ? <Loader2 className="animate-spin" /> : <Play />}</Button>}
+          <Button size="xs" variant="ghost" onClick={() => { play.stop(); onWeight(null, true) }}><RotateCcw />Default</Button>
         </div>
       </div>
       {ax && family.masters.length > 1 ? (
         <div className="flex flex-col gap-4 p-3">
-          {slider(ax.name, ax.name, ax.min, ax.max, here, n => onWeight(n), family.masters.map(m => m.location[ax.name] ?? ax.default), playing ? frames : [])}
-          {extra.map(a => slider(a.name, a.name, a.min, a.max, at(a.name), n => { if (weight === null) onWeight(ax.default); onAxis(a.name, n) }, family.masters.map(m => m.location[a.name] ?? a.default), []))}
+          {slider(ax.name, ax.name, ax.min, ax.max, here, (n, instant) => onWeight(n, instant), family.masters.map(m => m.location[ax.name] ?? ax.default), play.playing || play.preparing ? play.steps : [])}
+          {extra.map(a => slider(a.name, a.name, a.min, a.max, at(a.name), n => { if (weight === null) onWeight(ax.default, true); onAxis(a.name, n) }, family.masters.map(m => m.location[a.name] ?? a.default), []))}
         </div>
       ) : <p className="p-3 text-[11px] leading-snug text-muted-foreground">With a second master, the weight between the two can be previewed here.</p>}
       <div className="flex flex-col gap-1.5 border-t p-3">

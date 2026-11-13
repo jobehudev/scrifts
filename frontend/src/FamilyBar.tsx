@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NumField } from './NumField'
+import type { FamilyPlay } from './familyPlay'
 
 export type Master = { path: string; name: string; weight: number; location: Record<string, number> }
 export type BlendGlyph = { width: number; contours: [number, number, number][][]; closed: boolean[] }
@@ -35,11 +36,13 @@ const tabClass = (on: boolean, brace = false) =>
        : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'}`
 const addTabClass = 'flex h-7 w-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-accent/40 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50'
 
-export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, busy, check, onCheck, weight, onWeight, onAddHere, axisVals, onAxis, onAddAxis, glyph, onAddBrace, onRemoveBrace }: {
+export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, busy, check, onCheck, weight, onWeight, play, onAddHere, axisVals, onAxis, onAddAxis, glyph, onAddBrace, onRemoveBrace }: {
   family: Family; current: string; onSwitch: (m: Master) => void; onAdd: () => void; onRemove: (m: Master) => void; onEdit: (m: Master) => void; busy: boolean
   check: Check | null; onCheck: () => void
   /** Weight slider: preview the blend at this weight (null = off). */
-  weight: number | null; onWeight: (w: number | null) => void; onAddHere: () => void
+  weight: number | null; onWeight: (w: number | null, instant?: boolean) => void; onAddHere: () => void
+  /** Play, shared with the Axes panel. */
+  play: FamilyPlay
   /** Values of the axes after Weight (missing = the axis default), and how to change them or add an axis. */
   axisVals: Record<string, number>; onAxis: (name: string, v: number) => void; onAddAxis: () => void
   /** The selected glyph, which a brace layer would be made for, and what to do with brace layers. */
@@ -49,23 +52,6 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
   const extra = family.axes.slice(1)
   const at = (name: string) => axisVals[name] ?? family.axes.find(a => a.name === name)!.default
   const here: Record<string, number> = { Weight: weight ?? ax?.default, ...Object.fromEntries(extra.map(a => [a.name, at(a.name)])) }
-  // Play: sweep the weight from one end of the family to the other and back, so the shapes can be watched changing
-  const [playing, setPlaying] = useState(false)
-  const lo = ax?.min ?? 0, hi = ax?.max ?? 0
-  useEffect(() => {
-    if (!playing || hi <= lo) return
-    const t0 = performance.now()
-    let raf = 0
-    const frame = () => {  // on the screen's own frame clock; the views fetch only the newest weight, so a fast sweep cannot pile up
-      const elapsed = performance.now() - t0
-      if (elapsed >= 4000) { onWeight(lo); setPlaying(false); return }  // one round trip, then it rests: it does not keep asking the server
-      const phase = (elapsed / 4000) * Math.PI * 2
-      onWeight(Math.round(lo + (hi - lo) * (0.5 - 0.5 * Math.cos(phase))))
-      raf = requestAnimationFrame(frame)
-    }
-    raf = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(raf)
-  }, [playing, lo, hi, onWeight])
   const between = weight !== null && !family.masters.some(m => family.axes.every(a => (m.location[a.name] ?? a.default) === here[a.name]))
   return (
     <div className="flex flex-wrap items-stretch border-b bg-muted/30 text-xs">
@@ -119,15 +105,17 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
         <div className="flex flex-wrap items-center gap-2">
           <input type="range" min={ax.min} max={ax.max} step={1} value={weight ?? ax.default}
             onChange={e => onWeight(Number(e.target.value))} aria-label="Preview weight" className="w-32 accent-primary" />
-          <div className="w-36"><NumField hideLabel buttons label="Weight" min={ax.min} max={ax.max} value={weight ?? ax.default} onCommit={n => onWeight(Math.round(n))} /></div>
-          <Button size="icon-xs" variant={playing ? 'secondary' : 'ghost'} aria-pressed={playing} aria-label={playing ? 'Stop the animation' : 'Play: sweep the weight'}
-            title={playing ? 'Stop' : 'Play: watch the shapes change from the lightest master to the heaviest and back'} onClick={() => setPlaying(p => !p)}>{playing ? <Pause /> : <Play />}</Button>
+          <div className="w-36"><NumField hideLabel buttons label="Weight" min={ax.min} max={ax.max} value={weight ?? ax.default} onCommit={n => onWeight(Math.round(n), true)} /></div>
+          {play.can && <Button size="icon-xs" variant={play.playing || play.preparing ? 'secondary' : 'ghost'} aria-pressed={play.playing || play.preparing}
+            aria-label={play.playing ? 'Stop the animation' : play.preparing ? 'Getting ready: click to cancel' : 'Play: sweep the weight'}
+            title={play.playing ? 'Stop' : play.preparing ? 'Getting every weight ready first: click to cancel' : 'Play: gets every weight ready, then shows the shapes changing from the lightest master to the heaviest and back'}
+            onClick={() => void play.toggle()}>{play.playing ? <Pause /> : play.preparing ? <Loader2 className="animate-spin" /> : <Play />}</Button>}
           {extra.map(a => (
             <label key={a.name} className="flex items-center gap-1 text-muted-foreground" title={a.name}>{a.tag}
               <input type="range" min={a.min} max={a.max} step={1} value={at(a.name)} aria-label={`Preview ${a.name}`}
                 onChange={e => { if (weight === null) onWeight(ax.default); onAxis(a.name, Number(e.target.value)) }} className="w-24 accent-primary" />
               <div className="w-32"><NumField hideLabel buttons label={a.name} min={a.min} max={a.max} value={at(a.name)}
-                onCommit={n => { if (weight === null) onWeight(ax.default); onAxis(a.name, Math.round(n)) }} /></div>
+                onCommit={n => { if (weight === null) onWeight(ax.default, true); onAxis(a.name, Math.round(n)) }} /></div>
             </label>
           ))}
           {weight !== null && <>
@@ -139,7 +127,7 @@ export function MasterBar({ family, current, onSwitch, onAdd, onRemove, onEdit, 
               title={glyph ? (between ? `Give ${glyph} its own extra shape at this position` : 'Move the sliders to a position that has no master') : 'Select a glyph first'}>
               {'{'}Brace{'}'} {glyph ?? ''}
             </Button>
-            <Button size="icon-xs" variant="ghost" onClick={() => { setPlaying(false); onWeight(null) }} aria-label="Stop previewing"><X /></Button>
+            <Button size="icon-xs" variant="ghost" onClick={() => { play.stop(); onWeight(null, true) }} aria-label="Stop previewing"><X /></Button>
           </>}
         </div>
       )}

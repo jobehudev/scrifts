@@ -29,6 +29,7 @@ const FeaturesView = lazy(() => import('./FeaturesView').then(m => ({ default: m
 const ScriptView = lazy(() => import('./ScriptView').then(m => ({ default: m.ScriptView })))
 import { VariableBar, useVariableState } from './VariableBar'
 import { FamilyPanel } from './FamilyPanel'
+import { useFamilyPlay } from './familyPlay'
 const VariablePanel = lazy(() => import('./VariablePanel').then(m => ({ default: m.VariablePanel })))
 const SmartPanel = lazy(() => import('./SmartPanel').then(m => ({ default: m.SmartPanel })))
 const PropertiesPanel = lazy(() => import('./PropertiesPanel').then(m => ({ default: m.PropertiesPanel })))
@@ -132,7 +133,17 @@ export default function App() {
   const [reference, setReference] = useState<Reference | null>(null)
   const [family, setFamily] = useState<Family | null>(null)
   const [familyDialog, setFamilyDialog] = useState<'new' | 'add' | 'blend'>('add')
-  const [weight, setWeight] = useState<number | null>(null)
+  // the slider's own position, and the weight the views draw (at most 12 times a second while it is dragged; typed, stepped or played values apply at once)
+  const [weight, setWeightRaw] = useState<number | null>(null)
+  const [shownWeight, setShownWeight] = useState<number | null>(null)
+  const instantW = useRef(false)
+  const shownAt = useRef(0)
+  const setWeight = useCallback((w: number | null, instant = false) => { if (instant || w === null) instantW.current = true; setWeightRaw(w) }, [])
+  useEffect(() => {
+    const wait = instantW.current ? 0 : Math.max(0, 1000 / 12 - (performance.now() - shownAt.current))
+    const t = window.setTimeout(() => { instantW.current = false; shownAt.current = performance.now(); setShownWeight(weight) }, wait)
+    return () => window.clearTimeout(t)
+  }, [weight])
   const [axisVals, setAxisVals] = useState<Record<string, number>>({})  // preview position on the axes after Weight
   const [axisOpen, setAxisOpen] = useState(false)
   const [blend, setBlend] = useState<{ name: string; weight: number; glyph: BlendGlyph | null } | null>(null)
@@ -328,9 +339,10 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     clearTimeout(checkTimer.current)
     checkTimer.current = window.setTimeout(() => runCheck(family), 700)
   }, [family, runCheck])
+  const play = useFamilyPlay(family, axisVals, !!font?.quadratic, setWeight)
   // the selected glyph blended at the slider's weight
   // (one request at a time, for the newest weight: see SpacingView)
-  const blendWanted = useRef({ family, weight, axisVals, sel })
+  const blendWanted = useRef({ family, weight: shownWeight, axisVals, sel })
   const blendPump = useRef(latestOnly(async () => {
     const w = blendWanted.current
     if (!w.family || w.weight === null || !w.sel || w.family.masters.length < 2) return
@@ -339,10 +351,10 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     setBlend({ name: w.sel, weight: w.weight, glyph: r[w.sel] ?? null })
   }))
   useEffect(() => {
-    blendWanted.current = { family, weight, axisVals, sel }
-    if (!family || weight === null || !sel || family.masters.length < 2) { setBlend(null); return }
+    blendWanted.current = { family, weight: shownWeight, axisVals, sel }
+    if (!family || shownWeight === null || !sel || family.masters.length < 2) { setBlend(null); return }
     blendPump.current()
-  }, [family, weight, axisVals, sel, blendRev])
+  }, [family, shownWeight, axisVals, sel, blendRev])
 
   const marks = useMemo(() => new Set(check?.glyphs.map(g => g.name)), [check])
 
@@ -752,7 +764,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       onPick={(m, ci, pi) => { if (!sel) return; pointFocus.set({ path: m.path, glyph: sel, ci, pi }); switchView('glyph'); if (!samePath(font.path, m.path)) { const target = family?.masters.find(x => samePath(x.path, m.path)); if (target) switchMaster(target) } }} />
     if (v === 'layers') return <div ref={setLayersEl} className="relative h-full min-h-0 overflow-y-auto" />
     if (v === 'grid') return (
-      <GlyphGrid font={font} sel={sel} loc={loc} onSelect={setSel}
+      <GlyphGrid font={font} sel={sel} loc={loc} family={family} weight={shownWeight} axisVals={axisVals} blendRev={blendRev} onSelect={setSel}
         onOpen={n => { setSel(n); if (view !== 'accents') switchView('glyph') }} onCreate={create} guides={guides} marks={family ? marks : undefined}
         masterOps={masterOps} onChanged={() => { void refresh(); for (const g of ghostsRef.current) g.store.clear(); runCheck(family); setBlendRev(r => r + 1) }} />
     )
@@ -762,7 +774,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     return font.axes.length
       ? <VariablePanel key={font.path} font={font} vv={vv} pickSave={initial => pick('save', initial)} run={run} onSplit={splitVariable} />
       : family
-        ? <FamilyPanel family={family} current={font.path} weight={weight} onWeight={setWeight} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))}
+        ? <FamilyPanel family={family} current={font.path} weight={weight} onWeight={setWeight} play={play} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))}
             onSwitch={switchMaster} onAddHere={() => { setFamilyDialog('blend'); setFamilyOpen(true) }} onAddAxis={() => setAxisOpen(true)} onAddMaster={() => { setFamilyDialog('add'); setFamilyOpen(true) }}
             check={check} onCheck={() => setCheckOpen(true)} busy={!!busy} />
         : <p className="p-3 text-xs text-muted-foreground">This font has no variable axes.</p>
@@ -771,7 +783,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
   const renderView = (v: string) => !font ? null : ['grid', 'layers', 'properties', 'info', 'history', 'shapes', 'smart', 'variable', 'compare'].includes(v) ? renderTool(v) : (
   <div className="relative min-h-0 flex-1">
                   {v === 'glyph' && <GlyphView font={font} name={sel} loc={loc} guides={guides} onGuides={setGuides} vguides={vguides} onVGuides={setVGuides} reference={reference} ghosts={ghosts} blend={blend} masterOps={masterOps} onEdited={family ? recheckSoon : undefined} />}
-                  {v === 'spacing' && <SpacingView font={font} loc={loc} sel={sel} onSelect={setSel} guides={guides} reference={reference} family={family} weight={weight} location={axisVals} blendRev={blendRev} onStopPreview={() => setWeight(null)} />}
+                  {v === 'spacing' && <SpacingView font={font} loc={loc} sel={sel} onSelect={setSel} guides={guides} reference={reference} family={family} weight={shownWeight} location={axisVals} blendRev={blendRev} onStopPreview={() => setWeight(null)} />}
                   {v === 'accents' && <AccentView font={font} sel={sel} onSelect={setSel} onEditGlyph={n => { setSel(n); switchView('glyph') }} guides={guides} onGuides={setGuides} reference={reference} onFontChanged={refresh} />}
                   {v === 'features' && <FeaturesView font={font} onChanged={refresh} onOpenGlyph={n => { setSel(n); switchView('glyph') }} onOpenSpacing={() => switchView('spacing')} />}
                   {v === 'script' && <ScriptView onChanged={refresh} />}
@@ -835,7 +847,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
             {!family && font.axes.length > 0 && <VariableBar font={font} vv={vv} onSplit={splitVariable} busy={!!busy} />}
             {family && <MasterBar family={family} current={font.path} onSwitch={switchMaster} onRemove={setRemoving} onEdit={setEditingMaster} onAdd={() => { setFamilyDialog('add'); setFamilyOpen(true) }} busy={!!busy}
               check={check} onCheck={() => setCheckOpen(true)}
-              weight={weight} onWeight={setWeight} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))} onAddAxis={() => setAxisOpen(true)} glyph={sel} onAddBrace={addBrace} onRemoveBrace={removeBrace} onAddHere={() => { setFamilyDialog('blend'); setFamilyOpen(true) }} />}
+              weight={weight} onWeight={setWeight} play={play} axisVals={axisVals} onAxis={(n, v) => setAxisVals(a => ({ ...a, [n]: v }))} onAddAxis={() => setAxisOpen(true)} glyph={sel} onAddBrace={addBrace} onRemoveBrace={removeBrace} onAddHere={() => { setFamilyDialog('blend'); setFamilyOpen(true) }} />}
             <div className="min-h-0 flex-1"><Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading the workspace…</p>}><Dock render={renderView} onActive={setView} onOpen={setOpenPanels} handle={dockRef} axes={font.axes.length > 0 || !!family} layersEl={layersEl} /></Suspense></div>
           </main>
         ) : (

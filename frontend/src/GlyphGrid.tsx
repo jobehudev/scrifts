@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, bench, outlines, type FontInfo, type Location } from './api'
+import { blendStore, useBlendVersion } from './blendStore'
+import type { Family } from './FamilyBar'
 import { theme, useCanvas, useOutlineVersion } from './canvas'
 import { getClip, setClip, type GlyphData } from './clip'
 import type { MasterOps } from './FamilyBar'
@@ -75,8 +77,10 @@ function slots(font: FontInfo, mode: Mode, scriptTags: string): Slot[] {
  * scroller whose height is the full grid. Only rows on screen are drawn or
  * fetched, so the full BMP (63k slots) scrolls as smoothly as 100 glyphs.
  */
-export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, marks, masterOps, onChanged }: {
+export function GlyphGrid({ font, sel, loc, family = null, weight = null, axisVals = {}, blendRev = 0, onSelect, onOpen, onCreate, guides, marks, masterOps, onChanged }: {
   font: FontInfo; sel: string | null; loc: Location | null
+  /** The family and the weight its slider previews (null = off): the cells then show the blend of the masters at that weight. */
+  family?: Family | null; weight?: number | null; axisVals?: Record<string, number>; blendRev?: number
   onSelect: (n: string) => void; onOpen: (n: string) => void; onCreate: (unicode: number) => void
   guides: number[]
   /** Glyphs to flag with a dot (masters that don't match). */
@@ -124,6 +128,9 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
   const [size, setSize] = useState({ w: 0, h: 0 })
   const scroller = useRef<HTMLDivElement>(null)
   useOutlineVersion()
+  useBlendVersion()
+  useEffect(() => { blendStore.clear() }, [blendRev, family?.path])
+  const blending = !!family && weight !== null && family.masters.length > 1
 
   // a typed glyph name that the font does not have yet (dotlessi): ask FontForge which character it is
   const [nameCp, setNameCp] = useState(-1)
@@ -205,7 +212,9 @@ export function GlyphGrid({ font, sel, loc, onSelect, onOpen, onCreate, guides, 
         ctx.globalAlpha = 1
         continue
       }
-      const o = outlines.want(g.name, loc)
+      const o0 = outlines.want(g.name, loc)
+      const bl = blending ? blendStore.get({ family: family!.path, weight: weight!, location: axisVals, quadratic: font.quadratic }, g.name) : undefined
+      const o = bl ? { path: bl.path, width: bl.width, box: null } : o0  // blended at the slider's weight, else the open master's own drawing
       if (!o) { missing++; continue }
       if (guides.length) {  // font-wide guides in every cell, to see alignment at a glance
         ctx.strokeStyle = t.guide
