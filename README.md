@@ -1,8 +1,13 @@
-# Scrifts
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/wordmark-light.svg">
+    <img src="docs/wordmark-dark.svg" alt="Scrifts" width="360">
+  </picture>
+</p>
 
 A free, open source font editor for Windows and the web.
 
-Draw glyphs, build variable fonts from masters, place accents, space and kern, and export to TTF, OTF, UFO and more.
+Draw glyphs, build variable fonts from masters, place accents, space and kern, and export to TTF, OTF, WOFF and WOFF2.
 GPL-3.0-or-later.
 
 Scrifts is built on [FontForge](https://fontforge.org) (its engine is used through the Python module, not forked) and
@@ -35,6 +40,15 @@ blend into a master of its own.
 **Place accents once.** Position an accent and see it on every letter that uses it.
 
 ![Accents: placing an acute over the e, with every letter that uses it listed below](docs/accents.png)
+
+**Work with the formats you already have.** Open and save `.glyphs`, `.ufo`, `.sfd`, `.otf` and `.ttf`, plus
+`.designspace` projects for masters. Export OTF, TTF, WOFF and WOFF2. Trace a picture into a glyph, and round-trip
+outlines with Illustrator through SVG.
+
+**Script the boring parts.** `File > Execute Script` runs Python on the open font, with `font`, `fontforge` and `psMat`
+ready to use, so batch jobs such as rounding coordinates or adjusting sidebearings across a whole set take a few
+lines. For repeatable jobs, a [plugin](plugins/README.md) is a folder with a `plugin.json` and a `main.py`; Scrifts
+draws the settings form for you, and the ones in `plugins/` are good starting points.
 
 ## Make it yours
 
