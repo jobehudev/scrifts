@@ -251,9 +251,10 @@ export class OutlineStore {
     this.emit()
   }
 
-  clear() {
+  /** `keepShown`: another master of the same family is coming, so keep drawing the old shapes until the new ones arrive (blank cells would flash). */
+  clear(keepShown = false) {
     this.cache.clear()
-    this.last.clear()
+    if (!keepShown) this.last.clear()
     this.points.clear()
     this.pending.clear()
     this.wanted.clear()

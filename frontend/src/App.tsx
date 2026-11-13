@@ -245,7 +245,7 @@ export default function App() {
 
   /** Open (or create) a font and make it this page's font. */
   const adopt = useCallback(async (load: () => Promise<FontInfo & { fid: number }>, keepSel?: string | null) => {
-    outlines.clear()
+    outlines.clear(keepSel !== undefined)  // switching masters passes the selection on: keep the old shapes on screen until the new ones are in
     setLoc(null)
     Object.assign(bench, { start: performance.now(), opened: 0, firstPaint: 0 })
     const old = session.fid
