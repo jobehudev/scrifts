@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-A free, open source font editor for Windows.
+<p align="center">A free, open source font editor for Windows.</p>
 
 Early release (v0.1): expect rough edges, and please [file an issue](https://github.com/jobehudev/scrifts/issues) when
 you hit one. Windows only for now.
