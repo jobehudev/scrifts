@@ -900,7 +900,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
                       <button type="button" className="flex min-w-0 flex-1 flex-col items-start text-left" disabled={!!busy || (missing ?? []).includes(r.path)}
                         onClick={() => openPath(r.path)} title={(missing ?? []).includes(r.path) ? `${r.path} (not found, moved or deleted)` : r.path}>
                         <span className="flex w-full items-baseline gap-0.5">
-                          <span className="truncate text-base font-medium">{r.name}</span>
+                          <span className="truncate text-base font-medium">{recent.some(o => o !== r && o.name === r.name) ? r.path.split(/[\\/]/).pop()!.replace(/\.[^.]+$/, '') : r.name}</span>
                           <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{ext(r.path)}</span>
                         </span>
                         <span className="w-full truncate font-mono text-[11px] text-muted-foreground">{r.path}</span>
