@@ -1372,12 +1372,12 @@ def test_missing_paths(client, tmp_path):
 
 
 def test_sample_font_for_first_run(client, tmp_path):
-    r = client.post("/api/sample", json={"folder": str(tmp_path / "Forge")})
+    r = client.post("/api/sample", json={"folder": str(tmp_path / "Scrifts")})
     assert r.status_code == 200 and r.json()["created"] is True
     path = r.json()["path"]
     info = client.post("/api/open", json={"path": path}).json()
     names = {g["name"] for g in info["glyphs"]}
-    assert {"H", "E", "L", "O", "I", "T", "F", "space"} <= names and info["familyname"] == "Forge Sample"
+    assert {"H", "E", "L", "O", "I", "T", "F", "space"} <= names and info["familyname"] == "Scrifts Sample"
     fid = info["fid"]
     o = client.get("/api/glyph/O", params={"fid": fid}).json()
     assert len(o["contours"]) == 2 and [s["cw"] for s in o["shapes"]].count(True) == 1     # an outer shape and a hole
@@ -1389,7 +1389,7 @@ def test_sample_font_for_first_run(client, tmp_path):
     client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour",
                                    "args": {"points": [[0, 0, 1], [0, 10, 1], [10, 10, 1]], "closed": True}})
     client.post("/api/save", json={"fid": fid})
-    again = client.post("/api/sample", json={"folder": str(tmp_path / "Forge")}).json()
+    again = client.post("/api/sample", json={"folder": str(tmp_path / "Scrifts")}).json()
     assert again["created"] is False and again["path"] == path
     assert len(client.get("/api/glyph/I", params={"fid": fid}).json()["contours"]) == 2
 
@@ -1639,7 +1639,7 @@ def test_vertical_and_horizontal_guides_live_side_by_side(client, tmp_path):
     # and they are saved with the font
     client.post("/api/vguides", json={"fid": fid, "xs": [60]})
     client.post("/api/save", json={"fid": fid})
-    again = client.post("/api/open", json={"path": str(tmp_path / "s" / "Forge Sample.sfd")}).json()["fid"]
+    again = client.post("/api/open", json={"path": str(tmp_path / "s" / "Scrifts Sample.sfd")}).json()["fid"]
     assert client.get("/api/vguides", params={"fid": again}).json() == [60]
     assert client.get("/api/guides", params={"fid": again}).json() == [100]
 

@@ -244,6 +244,7 @@ export class OutlineStore {
       uses: refNames(o), empty: !o.d.trim() && !o.refs?.length, box: rawBox(o),
     }
     this.cache.set(locKey(loc) + '|' + o.name, out)
+    if (this.cache.size > 40000) for (const k of [...this.cache.keys()].slice(0, 10000)) this.cache.delete(k)  // oldest first: a long slider session must not grow without limit
     if (!loc || locKey(loc) === this.newest) this.last.set(o.name, out)  // a late answer for a position the slider has left is kept, but not shown meanwhile
     if (notify) this.emit()
   }

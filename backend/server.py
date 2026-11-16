@@ -47,5 +47,12 @@ if __name__ == "__main__":
         sys.stdout = sys.stderr = open(log_dir / "backend.log", "a", encoding="utf8", buffering=1)
         print(f"--- start {__import__('datetime').datetime.now():%Y-%m-%d %H:%M:%S}")
 
+    import shutil, tempfile, time
+    for p in Path(tempfile.gettempdir()).glob("scrifts-*"):
+        try:
+            if time.time() - p.stat().st_mtime > 86400:
+                shutil.rmtree(p, True) if p.is_dir() else p.unlink()
+        except OSError:
+            pass
     port = int(os.environ.get("FORGE_PORT", "8765"))
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

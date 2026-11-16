@@ -50,6 +50,7 @@ class BlendStore {
 
   private store(spot: Spot, res: Record<string, BlendGlyph | null>, names: string[]) {
     const k = keyOf(spot)
+    if (this.cache.size > 60 && !this.cache.has(k)) this.cache.delete(this.cache.keys().next().value!)  // one entry per slider position: forget the oldest
     const m = this.cache.get(k) ?? this.cache.set(k, new Map()).get(k)!
     for (const n of names) {
       const g = res[n]

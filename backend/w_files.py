@@ -237,7 +237,7 @@ def op_restore_glyphs(names):
     import tempfile
     if not state.PATH or not os.path.exists(state.PATH):
         raise ValueError("this font hasn't been saved yet, so there is nothing to restore from")
-    tmp = tempfile.mkdtemp(prefix="forge-restore-")
+    tmp = tempfile.mkdtemp(prefix="scrifts-restore-")
     try:
         copy = os.path.join(tmp, os.path.basename(os.path.normpath(state.PATH)))
         (shutil.copytree if os.path.isdir(state.PATH) else shutil.copyfile)(state.PATH, copy)  # a .ufo is a folder
@@ -336,7 +336,7 @@ def op_make_sample(path):
     f = fontforge.font()
     f.encoding = "UnicodeBmp"
     f.em = 1000
-    f.familyname, f.fontname, f.fullname, f.weight = "Forge Sample", "ForgeSample-Regular", "Forge Sample Regular", "Regular"
+    f.familyname, f.fontname, f.fullname, f.weight = "Scrifts Sample", "ScriftsSample-Regular", "Scrifts Sample Regular", "Regular"
     cap, stem = 700, 84
     K = 0.5522847498
 

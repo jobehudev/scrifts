@@ -151,7 +151,7 @@ def export_glyphs(target: str, masters, locations=None, axes=None, convert_sfd=N
     import glyphsLib
     import tempfile
     from fontTools.designspaceLib import DesignSpaceDocument
-    tmp = tempfile.mkdtemp(prefix="forge-glyphs-")
+    tmp = tempfile.mkdtemp(prefix="scrifts-glyphs-")
     try:
         ufos = []
         for i, sfd in enumerate(masters):

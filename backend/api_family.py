@@ -715,7 +715,7 @@ def family_build(req: FamilyBuildReq):
         raise HTTPException(400, f"{len(bad)} glyphs don't match across masters, e.g. "
                                  + ", ".join(g["name"] for g in bad[:8]) + " (see the compatibility check)")
     out = []
-    with tempfile.TemporaryDirectory(prefix="forge-vf-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="scrifts-vf-") as tmp:
         if req.variable:
             vf = _build_variable(fam, tmp)
             ext = ".otf" if "CFF2" in vf else ".ttf"

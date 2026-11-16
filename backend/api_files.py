@@ -239,6 +239,8 @@ def preview(path: str, text: str = "Abg"):
     finally:
         _call("close", fid=info["fid"])
     out = {"em": info["em"], "ascent": info["ascent"], "descent": info["descent"], "glyphs": outs}
+    if len(_PREVIEWS) >= 64:
+        _PREVIEWS.pop(next(iter(_PREVIEWS)))  # oldest first
     _PREVIEWS[key] = out
     return out
 
@@ -451,7 +453,7 @@ class SampleReq(BaseModel):
 def make_sample(req: SampleReq):
     """A small font to try Scrifts on, written to Documents/Scrifts (left alone if it is already there)."""
     folder = req.folder or home_folder()
-    return _call("make_sample", path=os.path.join(folder, "Forge Sample.sfd"))
+    return _call("make_sample", path=os.path.join(folder, "Scrifts Sample.sfd"))
 
 
 @app.post("/api/autosave")

@@ -505,7 +505,7 @@ def op_webfont():
     """The open font compiled by FontForge to a temporary OTF/TTF, so the UI
     can be shown in it. Returns the file path; the server reads and deletes it."""
     import tempfile
-    fd, path = tempfile.mkstemp(suffix=".ttf" if state.FONT.is_quadratic else ".otf", prefix="forge-ui-")
+    fd, path = tempfile.mkstemp(suffix=".ttf" if state.FONT.is_quadratic else ".otf", prefix="scrifts-ui-")
     os.close(fd)
     # Not "no-hints": for TrueType output FontForge then writes no glyf table
     # at all (every outline gone), which browsers rightly refuse to load.
@@ -519,6 +519,10 @@ def op_close():
     # already open, so several fids can share one font. Close it only when
     # the last of them goes, or the others are left holding a dead font.
     state.FONTS.pop(state.FID)  # this handle; others sharing the font keep it
+    SVGDOCS.pop(state.FID, None)
+    from w_edit import REDO
+    for k in [k for k in REDO if k[0] == state.FID]:
+        del REDO[k]
     if not any(v[0] is state.FONT for v in state.FONTS.values()):
         _drop_checkpoints(state.FONT)
         state.FONT.close()
@@ -556,6 +560,8 @@ def _checkpoint(op):
         return
     if _undo_dir is None:
         _undo_dir = tempfile.mkdtemp(prefix="scrifts-undo-")
+        import atexit, shutil
+        atexit.register(shutil.rmtree, _undo_dir, True)  # whole-font copies: never leave them in Temp
     stack = CHECKPOINTS.setdefault(id(state.FONT), [])
     file = os.path.join(_undo_dir, f"{id(state.FONT)}-{len(stack)}-{os.urandom(3).hex()}.sfd")
     was = state.FONT.changed
