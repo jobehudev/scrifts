@@ -45,6 +45,7 @@
       "webviewInstallMode": { "type": "embedBootstrapper" },
       "nsis": {
         "installMode": "currentUser",
+        "installerHooks": "../packaging/hooks.nsh",
         "headerImage": "../packaging/art/header.bmp",
         "sidebarImage": "../packaging/art/sidebar.bmp",
         "installerIcon": "icons/icon.ico",
