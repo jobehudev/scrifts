@@ -149,7 +149,7 @@ libraries and their licences are in [CREDITS.md](CREDITS.md).
 
 <a href="https://star-history.com/#jobehudev/scrifts&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jobehudev/scrifts&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jobehudev/scrifts&type=Date&theme=dark" />
     <img alt="Star history chart" src="https://api.star-history.com/svg?repos=jobehudev/scrifts&type=Date" width="600" />
   </picture>
 </a>
