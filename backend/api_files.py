@@ -481,12 +481,12 @@ PLUGINS_BUNDLED = str(ROOT / "plugins")
 
 def _plugins():
     import plugins
-    return plugins.discover(plugins.plugin_dirs(PLUGINS_BUNDLED))
+    return plugins.discover_user(PLUGINS_BUNDLED)
 
 
 @app.get("/api/plugins")
 def list_plugins():
-    """Plugins found in Scrifts' own plugins folder and the user's (broken ones too, with their error)."""
+    """Plugins in the user's plugins folder (the ones that ship with Scrifts are put there if missing; broken ones are listed with their error)."""
     import plugins
     return {"folders": [{"label": l, "path": p} for l, p in plugins.plugin_dirs(PLUGINS_BUNDLED)],
             "plugins": [{k: v for k, v in p.items() if k != "folder"} for p in _plugins()]}

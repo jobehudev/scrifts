@@ -60,7 +60,7 @@ outlines with Illustrator through SVG.
 
 **Script the boring parts.** `File > Execute Script` runs Python on the open font, with `font`, `fontforge` and `psMat`
 ready to use, so batch jobs such as rounding coordinates or adjusting sidebearings across a whole set take a few
-lines. For repeatable jobs, a [plugin](plugins/README.md) is a folder with a `plugin.json` and a `main.py`; Scrifts
+lines. For repeatable jobs, a [plugin](plugins/README.md) is a folder with a `plugin.json` and a `main.py` (Python); Scrifts
 draws the settings form for you, and the ones in `plugins/` are good starting points.
 
 ## Make it yours

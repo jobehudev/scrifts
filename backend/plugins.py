@@ -37,6 +37,39 @@ def plugin_dirs(bundled: str) -> list[tuple[str, str]]:
     return [("bundled", bundled), ("yours", user_dir())]
 
 
+def _same(a: str, b: str) -> bool:
+    """Do these two plugin folders hold the same plugin.json and main.py?"""
+    for f in ("plugin.json", "main.py"):
+        try:
+            if open(os.path.join(a, f), "rb").read() != open(os.path.join(b, f), "rb").read():
+                return False
+        except OSError:
+            return False
+    return True
+
+
+def discover_user(bundled: str) -> list[dict]:
+    """The plugins in the user's own folder, after putting back any that ship with Scrifts and are missing there
+    (deleted, or new in this version). One that exists is never touched, so edits stay. A plugin that is still exactly
+    the shipped one is listed as "bundled" (trusted); an edited or added one is "yours"."""
+    import shutil
+    mine = user_dir()
+    os.makedirs(mine, exist_ok=True)
+    shipped = {os.path.basename(i["folder"]): i["folder"] for i in discover([("bundled", bundled)])}
+    for name, folder in shipped.items():
+        if not os.path.exists(os.path.join(mine, name)):
+            try:
+                shutil.copytree(folder, os.path.join(mine, name))
+            except OSError:
+                pass
+    found = discover([("yours", mine)])
+    for p in found:
+        name = os.path.basename(p["folder"])
+        if name in shipped and _same(shipped[name], p["folder"]):
+            p["source"], p["id"] = "bundled", "bundled/" + name
+    return found
+
+
 def read_manifest(folder: str) -> dict:
     """The manifest of the plugin in `folder`, checked. Raises ValueError saying what is wrong."""
     path = os.path.join(folder, "plugin.json")

@@ -1271,7 +1271,8 @@ def test_glyphs_intermediate_layer_becomes_a_brace_layer(client, tmp_path):
     assert client.post("/api/import/glyphs", json={"path": str(g)}).json()["reused"] is True
 
 
-def test_plugins_listed_run_and_fail_clearly(client, tmp_path):
+def test_plugins_listed_run_and_fail_clearly(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))  # the folder the bundled plugins are copied into
     lst = client.get("/api/plugins").json()
     by = {p["id"]: p for p in lst["plugins"]}
     assert {"bundled/round-coordinates", "bundled/copy-sidebearings", "bundled/small-caps-from-capitals"} <= set(by)

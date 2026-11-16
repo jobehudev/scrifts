@@ -1,7 +1,12 @@
 # Scrifts plugins
 
-A plugin is a folder with two files. Put it in `%APPDATA%\Forge\plugins` (Plugins menu → Open plugins folder)
-and it shows up in the Plugins menu. The ones in this folder ship with Scrifts and are good starting points.
+A plugin is a folder with two files: `plugin.json` (its name and settings) and `main.py` (the code, written in
+**Python**). Put it in `%APPDATA%\Scrifts\plugins` (Plugins menu → Open your plugins folder…) and it shows up in the
+Plugins menu.
+
+The plugins that ship with Scrifts (the ones in this folder) are copied into that same folder each time Scrifts starts,
+if they are missing, so you can read them, copy them as a starting point, edit them or delete them. A plugin you have
+edited is never overwritten; one you delete comes back at the next start.
 
 ```
 my-plugin/

@@ -68,3 +68,22 @@ def test_discover_lists_broken_plugins_too(tmp_path):
     make(tmp_path / "a", "_hidden", {"name": "Hidden"})
     found = discover([("bundled", str(tmp_path / "a")), ("yours", str(tmp_path / "missing"))])
     assert [(p["id"], p["name"], "error" in p) for p in found] == [("bundled/broken", "broken", True), ("bundled/good", "Good", False)]
+
+
+def test_bundled_plugins_are_put_back_when_missing_and_edits_stay(tmp_path, monkeypatch):
+    import os
+    from plugins import discover_user, user_dir
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    shipped = tmp_path / "shipped" / "round"
+    shipped.mkdir(parents=True)
+    (shipped / "plugin.json").write_text('{"name": "Round"}')
+    (shipped / "main.py").write_text("def run(font, ctx, params): pass")
+    got = {p["id"]: p for p in discover_user(str(tmp_path / "shipped"))}
+    assert list(got) == ["bundled/round"] and os.path.isfile(os.path.join(user_dir(), "round", "main.py"))
+    import shutil
+    shutil.rmtree(os.path.join(user_dir(), "round"))
+    assert list(p["id"] for p in discover_user(str(tmp_path / "shipped"))) == ["bundled/round"]  # back after a delete
+    (open(os.path.join(user_dir(), "round", "main.py"), "w")).write("def run(font, ctx, params): print(1)")
+    got = discover_user(str(tmp_path / "shipped"))
+    assert [p["id"] for p in got] == ["yours/round"]  # an edited copy is the user's now, and is not overwritten
+    assert "print(1)" in open(os.path.join(user_dir(), "round", "main.py")).read()
