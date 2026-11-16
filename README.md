@@ -5,7 +5,10 @@
   </picture>
 </p>
 
-A free, open source font editor for Windows and the web.
+A free, open source font editor for Windows.
+
+Early release (v0.1): expect rough edges, and please [file an issue](https://github.com/jobehudev/scrifts/issues) when
+you hit one. Windows only for now.
 
 Draw glyphs, build variable fonts from masters, place accents, space and kern, and export to TTF, OTF, WOFF and WOFF2.
 GPL-3.0-or-later.
@@ -22,7 +25,17 @@ Grab the Windows installer from the [latest release](https://github.com/jobehude
 It installs for your user only (no admin needed) and bundles FontForge's engine, so there is nothing else to install
 and nothing to compile.
 
+The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC". Click **More info**,
+then **Run anyway**.
+
 Want to hack on it instead? Skip to [Running from source](#running-from-source).
+
+## First steps
+
+1. Start the app and pick **File > New Font**, or open a font you already have (`.ttf`, `.otf`, `.ufo`, `.glyphs`, `.sfd`).
+2. Click a glyph in the grid to open it in the editor.
+3. Draw with the pen tool, drag points to reshape, and check the result in the weight preview if you have masters.
+4. **File > Generate Fonts** (Ctrl Shift G) writes TTF, OTF, WOFF or WOFF2.
 
 ## What you can do
 
