@@ -16,8 +16,8 @@ const pageCount = (chars: string) => Math.max(1, Math.ceil(new Set([...chars].fi
 /** File ▸ Template Sheet: print pages to write letters on, then read a scan or photo of them back into glyphs. */
 export function SheetDialog({ open, onClose, font, onDone }: { open: boolean; onClose: () => void; font: FontInfo; onDone: () => void }) {
   const [tab, setTab] = useState<'make' | 'read'>('make')
-  const [chars, setChars] = useState(() => localStorage.getItem('forge.sheetChars') ?? DEFAULT_CHARS)
-  const [folder, setFolder] = useState(() => localStorage.getItem('forge.sheetFolder') ?? `${dirOf(font.path)}\\${font.familyname} sheets`)
+  const [chars, setChars] = useState(() => localStorage.getItem('scrifts.sheetChars') ?? DEFAULT_CHARS)
+  const [folder, setFolder] = useState(() => localStorage.getItem('scrifts.sheetFolder') ?? `${dirOf(font.path)}\\${font.familyname} sheets`)
   const [made, setMade] = useState<{ pdf: string; files: string[] } | null>(null)
   const [scan, setScan] = useState('')
   const [page, setPage] = useState(1)
@@ -33,7 +33,7 @@ export function SheetDialog({ open, onClose, font, onDone }: { open: boolean; on
     if (r.path) setFolder(r.path)
   }
   const make = async () => {
-    localStorage.setItem('forge.sheetChars', chars); localStorage.setItem('forge.sheetFolder', folder)
+    localStorage.setItem('scrifts.sheetChars', chars); localStorage.setItem('scrifts.sheetFolder', folder)
     setBusy(true)
     try { setMade(await api('/api/sheet/make', { chars, folder, title: font.familyname })) } catch (e) { fail('Could not make the sheets')(e) } finally { setBusy(false) }
   }

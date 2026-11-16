@@ -53,7 +53,7 @@ def _family(path):
     }
 
 
-BRACES_KEY = "com.forge.braces"
+BRACES_KEY = "com.scrifts.braces"
 
 
 def _braces(doc):
@@ -63,7 +63,7 @@ def _braces(doc):
     that means "a full master" stays as it was."""
     base = os.path.dirname(os.path.abspath(doc.path)) if doc.path else ""
     out = []
-    for b in doc.lib.get(BRACES_KEY, []):
+    for b in doc.lib.get(BRACES_KEY, doc.lib.get("com.forge.braces", [])):  # the old key still reads
         loc = {a.name: b["location"].get(a.name, a.default) for a in doc.axes}
         out.append({"path": os.path.normpath(os.path.join(base, b["path"])), "name": b["name"],
                     "weight": loc.get("Weight", 400), "location": loc, "glyphs": list(b["glyphs"])})
@@ -72,6 +72,7 @@ def _braces(doc):
 
 def _save_braces(doc, path, braces):
     base = os.path.dirname(os.path.abspath(path))
+    doc.lib.pop("com.forge.braces", None)
     doc.lib[BRACES_KEY] = [{"path": os.path.relpath(b["path"], base), "name": b["name"], "location": b["location"],
                             "glyphs": b["glyphs"]} for b in braces]
     doc.write(path)

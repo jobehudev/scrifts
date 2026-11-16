@@ -71,7 +71,7 @@ export function proofPages(font: FontInfo, shaped: Shaped, outlines: Map<string,
 /** Build the proof of the open font and hand it to the print dialog. */
 export async function printProof(font: FontInfo, sample?: string): Promise<number> {
   // the Spacing view's text if it is plain text (its /name tokens are not something HarfBuzz reads)
-  const kept = sample ?? localStorage.getItem('forge.spacing') ?? ''
+  const kept = sample ?? localStorage.getItem('scrifts.spacing') ?? ''
   const text = (kept && !kept.includes('/') ? kept : DEFAULT_TEXT).slice(0, 200)
   const { api } = await import('./api')  // not at the top: the page builder above is tested without a browser
   const shaped = await api<Shaped>('/api/shape', { text, features: {} })

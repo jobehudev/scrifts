@@ -9,7 +9,7 @@ import { PRESETS, readSaved, writeSaved } from './workspaces'
 import { Button } from '@/components/ui/button'
 
 const title = (v: string) => [...VIEWS, ...TOOLS].find(([k]) => k === v)?.[1] ?? v
-const KEY = 'forge.dock3'
+const KEY = 'scrifts.dock3'
 
 const Render = createContext<(view: string) => ReactNode>(() => null)
 /** Which editor panel feeds the Layers panel (the last glyph or accents editor you used), and where it draws. */

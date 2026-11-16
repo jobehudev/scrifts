@@ -63,8 +63,8 @@ function AppearanceFields({ s, off, set }: { s: SvgStyle | 'none'; off: boolean;
 
 /** Bolder or lighter by any amount: every point moves, none is added or removed, so masters keep matching. */
 function WeightFields({ off, change }: { off: boolean; change: (delta: number) => void }) {
-  const [d, setD] = useState(() => Number(localStorage.getItem('forge.weight')) || 10)
-  const set = (v: number) => { setD(v); localStorage.setItem('forge.weight', String(v)) }
+  const [d, setD] = useState(() => Number(localStorage.getItem('scrifts.weight')) || 10)
+  const set = (v: number) => { setD(v); localStorage.setItem('scrifts.weight', String(v)) }
   return (
     <Section title="Weight" note="whole glyph">
       <Num wide label="Units" value={d} disabled={off} onCommit={v => v > 0 && set(v)} />
@@ -79,8 +79,8 @@ function WeightFields({ off, change }: { off: boolean; change: (delta: number) =
 
 /** Round corners, as Illustrator's Live Corners: a radius, then it rounds the selected points (every corner when none is selected). */
 function CornerFields({ off, points, scoped, round }: { off: boolean; points: number; scoped: boolean; round: (r: number, k: CornerKind) => void }) {
-  const [r, setR] = useState(() => Number(localStorage.getItem('forge.radius')) || 40)
-  const [k, setK] = useState<CornerKind>(() => (localStorage.getItem('forge.cornerKind') as CornerKind) || 'round')
+  const [r, setR] = useState(() => Number(localStorage.getItem('scrifts.radius')) || 40)
+  const [k, setK] = useState<CornerKind>(() => (localStorage.getItem('scrifts.cornerKind') as CornerKind) || 'round')
   return (
     <Section title="Corners" note={scoped ? `${points} selected` : 'all'}>
       <label className="flex items-center gap-2"><span className="w-14 shrink-0 text-muted-foreground">Type</span>

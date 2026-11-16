@@ -75,7 +75,7 @@ function Head({ title, count, tip, children }: { title: string; count?: number; 
  */
 export function LayersPanel({ pts, quadratic, selected, editable, hidden, locked, onHidden, onLocked, vis, onVis,
   guides, onGuides, vguides, onVGuides, hasBackground, referenceName, mastersName, underlayName, shadowName, autoShadow, onShadow, onSelectShape, edit,
-  anchors, classes, selAnchor, onSelectAnchor, onAddAnchor, onDeleteAnchor, inherited = [], onInherited, storageKey = 'forge.layers', docked = false, isAccent = false }: {
+  anchors, classes, selAnchor, onSelectAnchor, onAddAnchor, onDeleteAnchor, inherited = [], onInherited, storageKey = 'scrifts.layers', docked = false, isAccent = false }: {
   pts: Points; quadratic: boolean; selected: Set<number>; editable: boolean
   hidden: Set<number>; locked: Set<number>
   onHidden: (s: Set<number>) => void; onLocked: (s: Set<number>) => void
@@ -105,7 +105,7 @@ export function LayersPanel({ pts, quadratic, selected, editable, hidden, locked
   const [newGuide, setNewGuide] = useState('')
   const [newAxis, setNewAxis] = useState<'y' | 'x'>('y')
   const { gridStyle, snapToGrid } = useSettings()
-  const [storedCollapsed, setCollapsed] = useState(() => (localStorage.getItem(storageKey) ?? (storageKey === 'forge.layers' ? 'open' : 'collapsed')) === 'collapsed')
+  const [storedCollapsed, setCollapsed] = useState(() => (localStorage.getItem(storageKey) ?? (storageKey === 'scrifts.layers' ? 'open' : 'collapsed')) === 'collapsed')
   // in a narrow pane the panel starts folded so it doesn't cover the glyph; opening it there is temporary
   const root = useRef<HTMLDivElement>(null)
   const narrowPane = useNarrow(root)

@@ -138,7 +138,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   const [measure, setMeasure] = useState<{ a: Pt; b: Pt } | null>(null)
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [drag, setDrag] = useState<Drag | null>(null)
-  const [cornerKind, setCornerKind] = useState<CornerKind>(() => (localStorage.getItem('forge.cornerKind') as CornerKind) || 'round')
+  const [cornerKind, setCornerKind] = useState<CornerKind>(() => (localStorage.getItem('scrifts.cornerKind') as CornerKind) || 'round')
   const [cornerDlg, setCornerDlg] = useState<{ r: number } | null>(null)  // the Corners dialog; r: the radius being previewed
   // the last rounding, kept live: the outline from before it, so its widgets can be dragged back out (undo + redo with the new radius)
   const [live, setLive] = useState<{ name: string; base: Points; pairs: [number, number][]; r: number; expect: number } | null>(null)
@@ -149,17 +149,17 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   const [addingPoint, setAddingPoint] = useState(false)  // pen is over the outline: a click adds a point there
   // the pen draws outlines (default) or strokes: open paths with a width, that FontForge turns into outlines on Expand / Generate
   const [stroke, setStroke] = useState<StrokeSpec & { on: boolean }>(() => {
-    try { return { on: false, width: 80, cap: 'round', join: 'round', ...JSON.parse(localStorage.getItem('forge.stroke') ?? '{}') } } catch { return { on: false, width: 80, cap: 'round', join: 'round' } }
+    try { return { on: false, width: 80, cap: 'round', join: 'round', ...JSON.parse(localStorage.getItem('scrifts.stroke') ?? '{}') } } catch { return { on: false, width: 80, cap: 'round', join: 'round' } }
   })
   const [smartGuides, setSmartGuides] = useState<SmartGuide[]>([])
   const [vis, setVisState] = useState<LayerVis>(() => {
     const defaults: LayerVis = { guides: true, background: true, reference: true, masters: true, underlay: true, shadow: true, grid: true, rulers: true, smart: true }
-    try { return { ...defaults, ...JSON.parse(localStorage.getItem('forge.vis') ?? '{}') } } catch { return defaults }
+    try { return { ...defaults, ...JSON.parse(localStorage.getItem('scrifts.vis') ?? '{}') } } catch { return defaults }
   })
   const setVis = useCallback((v: LayerVis | ((prev: LayerVis) => LayerVis)) => {
     setVisState(prev => {
       const next = typeof v === 'function' ? v(prev) : v
-      localStorage.setItem('forge.vis', JSON.stringify(next))
+      localStorage.setItem('scrifts.vis', JSON.stringify(next))
       return next
     })
   }, [])
@@ -556,7 +556,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if (drawing) {
       const next = { ...stroke, ...patch }
       setStroke(next)
-      localStorage.setItem('forge.stroke', JSON.stringify(next))
+      localStorage.setItem('scrifts.stroke', JSON.stringify(next))
       return
     }
     const { on: _on, ...fields } = patch
@@ -612,7 +612,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
   }
   const roundCorners = (radius: number, kind: CornerKind = cornerKind) => {
     if (!(radius > 0)) return
-    localStorage.setItem('forge.radius', String(radius))
+    localStorage.setItem('scrifts.radius', String(radius))
     applyCorners(radius, kind, sel.size ? [...sel].map(unkey) : undefined)
   }
   // the Properties panel reads this editor's state, and changes it through these (always the latest ones)
@@ -1179,7 +1179,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     widgetPos(w.c, w.cr, w.rounded ? 2 : w.pi, drag?.kind === 'corner' && (!drag.single || (drag.ci === w.ci && drag.pi === w.pi)) ? drag.r : w.rounded ?? liveOn?.r ?? 0, WIDGET_PX / xf.current.s)
   const widgetAt = (p: Pt) => cornerWidgets.find(w => { const [x, y] = widgetXY(w); return Math.hypot(x - p.x, y - p.y) * xf.current.s < 8 })
   const applyCorners = (radius: number, kind: CornerKind, points?: [number, number][]) => {
-    localStorage.setItem('forge.cornerKind', kind); setCornerKind(kind)
+    localStorage.setItem('scrifts.cornerKind', kind); setCornerKind(kind)
     if (liveOn && name) {  // re-rounding the last rounding: back to the outline from before it, then round that
       setLive(radius > 0 ? { ...liveOn, r: radius, expect: 1 } : null); setSel(new Set())
       run(async () => {
@@ -1278,7 +1278,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       if (e.altKey) {  // Alt-click cycles the corner type, as in Illustrator
         const order: CornerKind[] = ['round', 'inverted', 'chamfer']
         const next = order[(order.indexOf(cornerKind) + 1) % order.length]
-        localStorage.setItem('forge.cornerKind', next); setCornerKind(next)
+        localStorage.setItem('scrifts.cornerKind', next); setCornerKind(next)
         toast(`Corner type: ${next === 'inverted' ? 'inverted round' : next}`)
       } else setDrag({ kind: 'corner', ci: cw.ci, pi: cw.pi, r: cw.rounded ?? liveOn?.r ?? 0, single: !liveOn && e.ctrlKey, sharpen: cw.rounded !== undefined })
       return
@@ -1367,7 +1367,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if (active === 'hand') { setView(FIT); return }
     if (active !== 'select' || !editable || !pts) return
     const p = toFont(e)
-    if (widgetAt(p)) { setCornerDlg({ r: Number(localStorage.getItem('forge.radius')) || 40 }); return }
+    if (widgetAt(p)) { setCornerDlg({ r: Number(localStorage.getItem('scrifts.radius')) || 40 }); return }
     const h = hit(p)
     if (h) {
       const [ci, pi] = h
@@ -1517,7 +1517,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
     if (drag?.kind === 'corner' && drag.sharpen) {
       const w0 = cornerWidgets.find(q => q.ci === drag.ci && q.pi === drag.pi)
       if (drag.r !== (w0?.rounded ?? -1)) {
-        localStorage.setItem('forge.cornerKind', cornerKind)
+        localStorage.setItem('scrifts.cornerKind', cornerKind)
         edit('round_corners', { radius: drag.r, corner: cornerKind, sharpen: true, points: drag.single ? [[drag.ci, drag.pi]] : [...sel].map(unkey) })
       }
     } else if (drag?.kind === 'corner' && (liveOn ? drag.r !== liveOn.r : drag.r > 0)) applyCorners(drag.r, cornerKind, drag.single ? [[drag.ci, drag.pi]] : cornerWidgets.map(w => [w.ci, w.pi]))
@@ -1708,7 +1708,7 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
       selectAll: () => pts && setSel(new Set(pts.contours.flatMap((cc, ci) => hidden.has(ci) || locked.has(ci) ? [] : cc.map((_, pi) => key(ci, pi))))),
       deselect: () => { setSel(new Set()); setMeasure(null) },
       delete: () => editable && deleteSel(),
-      roundCorners: () => editable && roundCorners(Number(localStorage.getItem('forge.radius')) || 40, (localStorage.getItem('forge.cornerKind') as CornerKind) || 'round'),
+      roundCorners: () => editable && roundCorners(Number(localStorage.getItem('scrifts.radius')) || 40, (localStorage.getItem('scrifts.cornerKind') as CornerKind) || 'round'),
       flipH: () => editable && transform('flipH'), flipV: () => editable && transform('flipV'),
       rotCW: () => editable && transform('rotCW'), rotCCW: () => editable && transform('rotCCW'),
       union: () => editable && pathfinder('union'), subtract: () => editable && pathfinder('subtract'),
@@ -1760,15 +1760,15 @@ export function GlyphView({ font, name, loc, guides, onGuides, vguides = [], onV
             onAddAnchor={addAnchor} onDeleteAnchor={deleteAnchor} isAccent={!!underlay || isAccentChar(glyphInfo?.unicode ?? -1)}
             shadowName={shadowName} autoShadow={autoShadow} onShadow={v => setShadowPick(resolveGlyph(font, v))}
             onSelectShape={(ci, add) => pts && setSel(s => new Set([...(add ? s : []), ...pts.contours[ci].map((_, pi) => key(ci, pi))]))}
-            edit={edit} docked={docked} storageKey={underlay !== undefined ? 'forge.layers.accents' : 'forge.layers'} />
+            edit={edit} docked={docked} storageKey={underlay !== undefined ? 'scrifts.layers.accents' : 'scrifts.layers'} />
   )
 
   return (
     <div className="flex h-full flex-col">
       {cornerDlg && <CornersDialog open kind={cornerKind} radius={cornerDlg.r}
         onPreview={(k, r) => { setCornerKind(k); setCornerDlg({ r }) }}
-        onClose={() => { setCornerKind((localStorage.getItem('forge.cornerKind') as CornerKind) || 'round'); setCornerDlg(null) }}
-        onApply={(k, r) => { localStorage.setItem('forge.radius', String(r)); setCornerDlg(null); applyCorners(r, k, [...sel].map(unkey)) }} />}
+        onClose={() => { setCornerKind((localStorage.getItem('scrifts.cornerKind') as CornerKind) || 'round'); setCornerDlg(null) }}
+        onApply={(k, r) => { localStorage.setItem('scrifts.radius', String(r)); setCornerDlg(null); applyCorners(r, k, [...sel].map(unkey)) }} />}
       {atDefault && (
         <ActionsBar hasSelection={sel.size > 0} shapes={selShapes.size} hasUnicode={(info?.unicode ?? -1) >= 0}
           transform={transform} pathfinder={pathfinder} edit={k => edit(k)} build={build} onImport={() => importOutlines()} />

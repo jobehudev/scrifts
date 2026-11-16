@@ -8,7 +8,7 @@ import { defineConfig, type Plugin } from 'vite'
 
 const DIR = import.meta.dirname
 const ROOT = path.resolve(DIR, '..')
-const BACKEND_PORT = Number(process.env.FORGE_API_PORT) || 8765  // a second copy for testing: FORGE_API_PORT=8811 and vite --port 5199
+const BACKEND_PORT = Number(process.env.SCRIFTS_API_PORT || process.env.FORGE_API_PORT) || 8765  // a second copy for testing: SCRIFTS_API_PORT=8811 and vite --port 5199
 
 function isPortOpen(port: number, host = '127.0.0.1'): Promise<boolean> {
   return new Promise(resolve => {

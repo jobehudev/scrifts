@@ -168,7 +168,7 @@ export default function App() {
   const busyRef = useRef<string | null>(null)
   const staleWarned = useRef(false)
   useEffect(() => { busyRef.current = busy })
-  const [view, setView] = useState(() => localStorage.getItem('forge.view') ?? 'glyph')
+  const [view, setView] = useState(() => localStorage.getItem('scrifts.view') ?? 'glyph')
   const [status, setStatus] = useState('')
   const [recent, setRecent] = useState(loadRecent)
   const [newOpen, setNewOpen] = useState(false)
@@ -193,8 +193,8 @@ export default function App() {
     api<{ missing: string[] }>('/api/missing', { paths: recent.map(r => r.path) }).then(r => { if (alive) setMissing(r.missing) }).catch(() => { if (alive) setMissing([]) })
     return () => { alive = false }
   }, [font, recent])
-  const [welcomeOpen,setWelcomeOpen] = useState(() => !localStorage.getItem('forge.welcomed') && loadRecent().length === 0)
-  const closeWelcome = useCallback(() => { localStorage.setItem('forge.welcomed', '1'); setWelcomeOpen(false) }, [])
+  const [welcomeOpen,setWelcomeOpen] = useState(() => !localStorage.getItem('scrifts.welcomed') && loadRecent().length === 0)
+  const closeWelcome = useCallback(() => { localStorage.setItem('scrifts.welcomed', '1'); setWelcomeOpen(false) }, [])
   const loadPlugins = useCallback(() => { void api<{ plugins: PluginInfo[] }>('/api/plugins').then(r => setPlugins(r.plugins)).catch(() => {}) }, [])
   useEffect(() => { loadPlugins() }, [loadPlugins])
   usePrefetchWorkspace()
@@ -204,7 +204,7 @@ export default function App() {
   const settings = useSettings()
   // Allow Overlap belongs to the project, not the app: a font that leans on overlapping shapes cutting each other out would be ruined by it.
   // Kept per project (a family's masters share one), off until switched on; outline edits carry it to the backend.
-  const overlapKey = font ? 'forge.overlap:' + (family?.path ?? font.path) : null
+  const overlapKey = font ? 'scrifts.overlap:' + (family?.path ?? font.path) : null
   const [overlapOn, setOverlapOn] = useState(false)
   useEffect(() => { setOverlapOn(!!overlapKey && localStorage.getItem(overlapKey) === '1') }, [overlapKey])
   session.stack = !!overlapKey && overlapOn
@@ -234,14 +234,14 @@ export default function App() {
   }, [hasAxes, font, openPanels])
   // the first time the pen is picked, make sure the Properties panel is there: that is where its settings are
   useEffect(() => propsStore.subscribe(() => {
-    if (propsStore.get()?.tool !== 'pen' || localStorage.getItem('forge.propsShown')) return
-    localStorage.setItem('forge.propsShown', '1')
+    if (propsStore.get()?.tool !== 'pen' || localStorage.getItem('scrifts.propsShown')) return
+    localStorage.setItem('scrifts.propsShown', '1')
     dockRef.current?.ensure('properties')
   }), [])
   const [layersEl, setLayersEl] = useState<HTMLElement | null>(null)  // the dock's Layers panel, which the glyph editor draws into
   /** Bring a view forward in the dock (opening it if it isn't there). */
-  useEffect(() => { if (font && sel) localStorage.setItem('forge.lastGlyph:' + font.path, sel) }, [font, sel])
-  const switchView = useCallback((v: string) => { localStorage.setItem('forge.view', v); if (dockRef.current) dockRef.current.show(v); else setView(v) }, [])
+  useEffect(() => { if (font && sel) localStorage.setItem('scrifts.lastGlyph:' + font.path, sel) }, [font, sel])
+  const switchView = useCallback((v: string) => { localStorage.setItem('scrifts.view', v); if (dockRef.current) dockRef.current.show(v); else setView(v) }, [])
 
 
   const run = useCallback(async <T,>(label: string, f: () => Promise<T>) => {
@@ -277,12 +277,12 @@ export default function App() {
     session.fid = f.fid
     if (old) void fetch('/api/close', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fid: old }) })
     bench.opened = performance.now() - bench.start
-    localStorage.setItem('forge.path', f.path)
+    localStorage.setItem('scrifts.path', f.path)
     setRecent(addRecent({ path: f.path, name: f.familyname || f.fontname, glyphs: f.glyphs.length, opened: Date.now() }))
     setFont(f)
     setGuidesState(await api<number[]>('/api/guides'))
     setVGuidesState(await api<number[]>('/api/vguides'))
-    const want = keepSel ?? localStorage.getItem('forge.lastGlyph:' + f.path)  // the glyph you were on when you last had this font open
+    const want = keepSel ?? localStorage.getItem('scrifts.lastGlyph:' + f.path)  // the glyph you were on when you last had this font open
     setSel(want && f.glyphs.some(g => g.name === want) ? want
       : f.glyphs.find(g => g.unicode === 0x61)?.name ?? f.glyphs[0]?.name ?? null)
   }, [])
@@ -291,7 +291,7 @@ export default function App() {
     if (path.toLowerCase().endsWith('.glyphs')) {
       // a Glyphs file becomes a Scrifts project folder next to it (one .sfd per master + a .designspace); the file itself is not touched
       const r = await api<{ designspace: string | null; default: string; masters: string[]; skipped: string[]; braces?: number; reused: boolean; folder: string }>('/api/import/glyphs', { path })
-      if (r.designspace) localStorage.setItem('forge.family', r.designspace)
+      if (r.designspace) localStorage.setItem('scrifts.family', r.designspace)
       toast.success(r.reused ? 'Reopened your Glyphs project' : `Imported ${r.masters.length} master${r.masters.length > 1 ? 's' : ''}${r.braces ? ` and ${r.braces} intermediate layer${r.braces > 1 ? 's (as brace layers)' : ' (as a brace layer)'}` : ''} from the Glyphs file`, {
         description: `${r.folder}${r.skipped.length ? `
 Not imported: ${r.skipped.join(', ')}.` : ''}`,
@@ -301,7 +301,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     if (path.toLowerCase().endsWith('.designspace')) {
       // a family: open its default master; the others come up as tabs
       const fam = await api<Family>(`/api/family?path=${encodeURIComponent(path)}`)
-      localStorage.setItem('forge.family', fam.path)
+      localStorage.setItem('scrifts.family', fam.path)
       const def = fam.masters.find(m => m.weight === fam.axes[0]?.default) ?? fam.masters[0]
       path = def.path
     }
@@ -327,7 +327,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     if (!font) { setFamily(null); return }
     // found from the font itself: a .designspace next to it that lists it
     api<Family | null>(`/api/family/of?font=${encodeURIComponent(font.path)}`)
-      .then(f => { setFamily(f); if (f) localStorage.setItem('forge.family', f.path) })
+      .then(f => { setFamily(f); if (f) localStorage.setItem('scrifts.family', f.path) })
       .catch(() => setFamily(null))
   }, [font?.path])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -432,7 +432,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       // this font becomes the family's first master, then the new one is added to it
       const path = `${font.path.replace(/[\\/][^\\/]*$/, '')}\\${font.familyname.replace(/\s+/g, '')}.designspace`
       const first = await api<Family>('/api/family/new', { path, weight: thisWeight ?? 400 })
-      localStorage.setItem('forge.family', first.path)
+      localStorage.setItem('scrifts.family', first.path)
       const fam = await api<Family>('/api/family/add', { family: first.path, style, weight })
       setFamily(fam)
       await goMaster(fam, fam.masters.find(m => m.name === style)!)
@@ -458,7 +458,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
     const path = await pick('save', stem)  // the project's name: it becomes a folder (and the family's file) there
     if (!path) return
     const r = await api<{ designspace: string; default: string; masters: string[]; folder: string }>('/api/family/split', { path })
-    localStorage.setItem('forge.family', r.designspace)
+    localStorage.setItem('scrifts.family', r.designspace)
     toast.success(`Split into ${r.masters.length} editable masters`, { description: r.folder })
     await adopt(() => api<FontInfo & { fid: number }>('/api/open', { path: r.default }))
   }) }, [font, run, adopt])
@@ -472,7 +472,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       await adopt(() => api<FontInfo & { fid: number }>('/api/new', { path, ...spec }))
       setGuidesState([])
       if (view !== 'glyph') switchView('glyph')
-      localStorage.setItem('forge.grid', 'latin')  // a new font is all empty slots: show them
+      localStorage.setItem('scrifts.grid', 'latin')  // a new font is all empty slots: show them
       window.dispatchEvent(new CustomEvent('forge:cmd', { detail: 'grid:latin' }))
     })
   }, [run, adopt, view])
@@ -690,7 +690,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
   }, [font?.path, sel, adopt, closeFont])
 
   const open = useCallback(async () => {
-    const path = await pick('open', font?.path ?? localStorage.getItem('forge.path') ?? undefined)
+    const path = await pick('open', font?.path ?? localStorage.getItem('scrifts.path') ?? undefined)
     if (path) openPath(path)
   }, [font, openPath])
 

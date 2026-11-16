@@ -20,7 +20,7 @@ type State = { glyphs: Record<string, Placement[]>; parts: string[] }
  */
 export function SmartPanel({ name, onChanged, docked = false }: { name: string; onChanged: () => void; docked?: boolean }) {
   const [state, setState] = useState<State | null>(null)
-  const [storedOpen, setOpen] = useState(() => localStorage.getItem('forge.smart') === 'open')
+  const [storedOpen, setOpen] = useState(() => localStorage.getItem('scrifts.smart') === 'open')
   const root = useRef<HTMLDivElement>(null)
   const narrow = useNarrow(root)  // a narrow pane starts it folded; opening it there is temporary
   const [narrowOpen, setNarrowOpen] = useState(false)
@@ -104,7 +104,7 @@ export function SmartPanel({ name, onChanged, docked = false }: { name: string; 
     <div ref={root} className="absolute bottom-3 left-14 z-10 w-72 max-w-[calc(100%-4.5rem)] overflow-hidden rounded-md border bg-card/95 text-xs shadow-sm backdrop-blur">
       <div className="flex items-center gap-1 px-2 py-1.5">
         <button type="button" className="flex items-center gap-1" aria-expanded={open}
-          onClick={() => { if (narrow) { setNarrowOpen(!narrowOpen); return } localStorage.setItem('forge.smart', open ? 'closed' : 'open'); setOpen(!open) }}>
+          onClick={() => { if (narrow) { setNarrowOpen(!narrowOpen); return } localStorage.setItem('scrifts.smart', open ? 'closed' : 'open'); setOpen(!open) }}>
           {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
           <span className="font-medium text-muted-foreground">Smart parts</span>
         </button>

@@ -1,7 +1,7 @@
 /** Recently opened fonts, newest first. Local to this machine. */
 export type Recent = { path: string; name: string; glyphs: number; opened: number }
 
-const KEY = 'forge.recent'
+const KEY = 'scrifts.recent'
 const MAX = 12
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()  // Windows paths
 
@@ -10,7 +10,7 @@ export function loadRecent(): Recent[] {
     const list = JSON.parse(localStorage.getItem(KEY) ?? '[]') as Recent[]
     if (list.length) return list
   } catch { /* corrupt entry: start over */ }
-  const old = localStorage.getItem('forge.path')  // the single "last font" before this list existed
+  const old = localStorage.getItem('scrifts.path')  // the single "last font" before this list existed
   return old ? [{ path: old, name: old.split(/[\\/]/).pop() ?? old, glyphs: 0, opened: 0 }] : []
 }
 

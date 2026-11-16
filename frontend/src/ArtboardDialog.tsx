@@ -28,7 +28,7 @@ export function ArtboardDialog({ mode, onClose, font, onDone }: {
     if (!mode) return
     // oxlint-disable-next-line react/set-state-in-effect -- start each opening from a clean report and the last folder
     setReport(null)
-    setFolder(localStorage.getItem('forge.artFolder') ?? `${dirOf(font.path)}\\${font.fontname} artboards`)
+    setFolder(localStorage.getItem('scrifts.artFolder') ?? `${dirOf(font.path)}\\${font.fontname} artboards`)
   }, [mode, font.path, font.fontname])
 
   const browse = async () => {
@@ -38,7 +38,7 @@ export function ArtboardDialog({ mode, onClose, font, onDone }: {
   const fail = (title: string) => (e: unknown) => toast.error(title, { description: (e as Error).message })
 
   const doExport = async () => {
-    localStorage.setItem('forge.artFolder', folder)
+    localStorage.setItem('scrifts.artFolder', folder)
     setBusy(true)
     try {
       const r = await api<{ files: string[] }>('/api/artboards/export', { folder, chars, template, square, ...(template && !chars ? { names: [] } : {}) })
@@ -47,7 +47,7 @@ export function ArtboardDialog({ mode, onClose, font, onDone }: {
     } catch (e) { fail('Export failed')(e) } finally { setBusy(false) }
   }
   const check = async () => {
-    localStorage.setItem('forge.artFolder', folder)
+    localStorage.setItem('scrifts.artFolder', folder)
     setBusy(true)
     try { setSkip(new Set()); setReport(await api<Report>('/api/artboards/import', { folder })) } catch (e) { fail('Could not read the folder')(e) } finally { setBusy(false) }
   }

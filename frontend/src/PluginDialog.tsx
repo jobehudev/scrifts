@@ -12,7 +12,7 @@ type Option = string | number | { value: string | number; label?: string }
 export type Param = { name: string; type: 'number' | 'integer' | 'text' | 'bool' | 'choice'; label: string; default?: unknown; min?: number; max?: number; options?: Option[] }
 export type PluginInfo = { id: string; source: string; name: string; description: string; version: string; author: string; params: Param[]; error?: string }
 
-const TRUST = 'forge.pluginTrust'
+const TRUST = 'scrifts.pluginTrust'
 const trusted = (p: PluginInfo) => p.source === 'bundled' || stored<string[]>(TRUST, []).includes(`${p.id}@${p.version}`)
 const opt = (o: Option) => (typeof o === 'object' ? { value: o.value, label: o.label ?? String(o.value) } : { value: o, label: String(o) })
 

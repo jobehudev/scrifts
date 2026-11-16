@@ -54,5 +54,5 @@ if __name__ == "__main__":
                 shutil.rmtree(p, True) if p.is_dir() else p.unlink()
         except OSError:
             pass
-    port = int(os.environ.get("FORGE_PORT", "8765"))
+    port = int(os.environ.get("SCRIFTS_PORT") or os.environ.get("FORGE_PORT", "8765"))
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

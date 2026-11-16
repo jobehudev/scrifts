@@ -255,10 +255,10 @@ export function FeaturesView({ font, onChanged, onOpenGlyph, onOpenSpacing }: { 
   /** Open Spacing with an example of this kind, Features on and this kind switched on (Spacing may not be open yet, so it is also left where it looks on opening). */
   const showInSpacing = (k: Kind, on: string[], glyphs: string[]) => {
     const text = exampleOf(font, k, glyphs)
-    const choice = JSON.parse(localStorage.getItem('forge.proof.featChoice') ?? '{}') as Record<string, boolean>
-    localStorage.setItem('forge.spacing.' + font.familyname, text); localStorage.setItem('forge.spacing', text)
-    localStorage.setItem('forge.proof.features', 'true')
-    localStorage.setItem('forge.proof.featChoice', JSON.stringify({ ...choice, ...Object.fromEntries(on.map(t => [t, true])) }))
+    const choice = JSON.parse(localStorage.getItem('scrifts.proof.featChoice') ?? '{}') as Record<string, boolean>
+    localStorage.setItem('scrifts.spacing.' + font.familyname, text); localStorage.setItem('scrifts.spacing', text)
+    localStorage.setItem('scrifts.proof.features', 'true')
+    localStorage.setItem('scrifts.proof.featChoice', JSON.stringify({ ...choice, ...Object.fromEntries(on.map(t => [t, true])) }))
     window.dispatchEvent(new CustomEvent('forge:spacing-example', { detail: { text, on } }))
     onOpenSpacing()
   }

@@ -23,7 +23,7 @@ export const DEFAULTS: Settings = {
   theme: 'dark', custom: { bg: '#1b2030', accent: '#7aa2f7' }, uiScale: 100, uiFont: 'default', nudge: 1, nudgeBig: 10, gridCell: 64, gridStyle: 'dots', snapToGrid: false, reopenLast: false, autosave: true, scripts: ['latn'],
 }
 
-const KEY = 'forge.settings'
+const KEY = 'scrifts.settings'
 let current: Settings = (() => {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } } catch { return DEFAULTS }
 })()

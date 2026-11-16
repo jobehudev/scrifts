@@ -16,6 +16,6 @@ export const PRESETS: Record<string, Row[]> = {
   Review: [['compare'], ['grid', 'compare', 'left', 240], ['glyph', 'compare', 'right'], ['history', 'compare', 'below']],
 }
 
-const KEY = 'forge.workspaces'
+const KEY = 'scrifts.workspaces'
 export const readSaved = (): Record<string, unknown> => { try { return JSON.parse(localStorage.getItem(KEY) ?? '{}') } catch { return {} } }
 export const writeSaved = (v: Record<string, unknown>) => localStorage.setItem(KEY, JSON.stringify(v))

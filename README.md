@@ -93,7 +93,7 @@ py -3.12 -m venv .venv && .venv/Scripts/python -m pip install fastapi uvicorn fo
 cd frontend && npm install && npm run dev
 ```
 
-Then open http://localhost:5173. If FontForge is not in `C:\Program Files\FontForgeBuilds`, set `FORGE_FFPYTHON` to
+Then open http://localhost:5173. If FontForge is not in `C:\Program Files\FontForgeBuilds`, set `SCRIFTS_FFPYTHON` to
 its location.
 
 ### How the code is laid out

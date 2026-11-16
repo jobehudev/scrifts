@@ -64,14 +64,14 @@ print(len(empty), 'empty:', ' '.join(empty[:200]))`,
  * worker; scripts are not undoable, so Save only when happy.
  */
 export function ScriptView({ onChanged }: { onChanged: () => void }) {
-  const [code, setCode] = useState(() => localStorage.getItem('forge.script') ?? EXAMPLES['Ligature from two glyphs'])
+  const [code, setCode] = useState(() => localStorage.getItem('scrifts.script') ?? EXAMPLES['Ligature from two glyphs'])
   const [out, setOut] = useState<{ output: string; error: string | null; ms: number } | null>(null)
   const [running, setRunning] = useState(false)
   // the last 'line N' Python names in an error is, for a script run as one block, the line of the script itself
   const errorLine = out?.error ? [...out.error.matchAll(/line (\d+)/g)].map(m => +m[1]).at(-1) ?? null : null
 
   const runScript = async () => {
-    localStorage.setItem('forge.script', code)
+    localStorage.setItem('scrifts.script', code)
     setRunning(true)
     const t0 = performance.now()
     try {

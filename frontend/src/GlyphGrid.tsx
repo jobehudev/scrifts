@@ -118,7 +118,7 @@ export function GlyphGrid({ font, sel, loc, family = null, weight = null, axisVa
     masterOps?.copy(source, targets, [n]).then(() => onChanged?.()).catch(fail)
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<Mode>(() => {
-    const m = localStorage.getItem('forge.grid')
+    const m = localStorage.getItem('scrifts.grid')
     return m === 'latin' ? 'scripts' : m === 'font' || m === 'scripts' || m === 'unicode' ? m : 'font'  // 'latin' is what the Scripts view used to be called
   })
   // the languages whose slots show: the font's list, the same one the Features page uses
@@ -145,8 +145,8 @@ export function GlyphGrid({ font, sel, loc, family = null, weight = null, axisVa
   }, [query])
   const activeKey = active.join()
   const all = useMemo(() => slots(font, mode, activeKey), [font, mode, activeKey])
-  const [cat, setCat] = useState<Cat>(() => (localStorage.getItem('forge.gridCat') as Cat) ?? 'all')
-  useEffect(() => { localStorage.setItem('forge.gridCat', cat) }, [cat])
+  const [cat, setCat] = useState<Cat>(() => (localStorage.getItem('scrifts.gridCat') as Cat) ?? 'all')
+  useEffect(() => { localStorage.setItem('scrifts.gridCat', cat) }, [cat])
   const list = useMemo(() => all.filter(matcher(query, nameCp)).filter(g => cat === 'all' || (cat === 'alts' ? isAlternate(g) : catOf(g.unicode) === cat)), [all, query, nameCp, cat])
   const missingByName = nameCp >= 0 && !font.glyphs.some(g => g.unicode === nameCp) ? nameCp : null
   const filled = useMemo(() => list.reduce((n, s) => n + (s.name ? 1 : 0), 0), [list])
@@ -156,7 +156,7 @@ export function GlyphGrid({ font, sel, loc, family = null, weight = null, axisVa
   const rows = Math.ceil(list.length / cols)
   const selIdx = empty !== null ? list.findIndex(g => !g.name && g.unicode === empty) : list.findIndex(g => g.name === sel)
 
-  useEffect(() => { localStorage.setItem('forge.grid', mode) }, [mode])
+  useEffect(() => { localStorage.setItem('scrifts.grid', mode) }, [mode])
   useCommands(c => { if (c.startsWith('grid:')) setMode(c.slice(5) as Mode) })
   useEffect(() => { setEmpty(null) }, [sel])
 

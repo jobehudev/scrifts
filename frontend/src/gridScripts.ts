@@ -44,7 +44,7 @@ export function scriptsInFont(glyphs: { unicode: number }[]): string[] {
   return GRID_SCRIPTS.map(s => s.tag).filter(t => BLOCKS[t].some(([a, b]) => glyphs.some(g => g.unicode >= a && g.unicode <= b)))
 }
 
-const key = (family: string) => `forge.scripts.${family}`
+const key = (family: string) => `scrifts.scripts.${family}`
 /** The scripts picked for this font family; the settings' default for one that was never set. */
 export function loadScripts(family: string, fallback: string[]): string[] {
   try {

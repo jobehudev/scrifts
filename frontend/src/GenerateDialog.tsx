@@ -37,10 +37,10 @@ export function GenerateDialog({ open, onOpenChange, font, onValidate, family }:
   const [whole, setWhole] = useState(true)
   const [variable, setVariable] = useState(true)
   const [statics, setStatics] = useState('')
-  const [folder, setFolder] = useState(() => localStorage.getItem('forge.genFolder') ?? dirOf(font.path))
+  const [folder, setFolder] = useState(() => localStorage.getItem('scrifts.genFolder') ?? dirOf(font.path))
   const [name, setName] = useState(font.fontname)
-  const [formats, setFormats] = useState<string[]>(() => stored('forge.genFormats', ['otf', 'ttf', 'woff2']))
-  const [hinting, setHinting] = useState(() => localStorage.getItem('forge.genHinting') ?? 'keep')
+  const [formats, setFormats] = useState<string[]>(() => stored('scrifts.genFormats', ['otf', 'ttf', 'woff2']))
+  const [hinting, setHinting] = useState(() => localStorage.getItem('scrifts.genHinting') ?? 'keep')
   const [problems, setProblems] = useState<Problem[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<Generated[] | null>(null)
@@ -63,9 +63,9 @@ export function GenerateDialog({ open, onOpenChange, font, onValidate, family }:
   }
 
   const generate = async () => {
-    localStorage.setItem('forge.genFolder', folder)
-    localStorage.setItem('forge.genFormats', JSON.stringify(formats))
-    localStorage.setItem('forge.genHinting', hinting)
+    localStorage.setItem('scrifts.genFolder', folder)
+    localStorage.setItem('scrifts.genFormats', JSON.stringify(formats))
+    localStorage.setItem('scrifts.genHinting', hinting)
     setBusy(true)
     try {
       const order = FORMATS.map(f => f[0]).filter(f => formats.includes(f))

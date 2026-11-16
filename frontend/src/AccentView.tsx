@@ -43,11 +43,11 @@ export function AccentView({ font, sel, onSelect, onEditGlyph, guides, onGuides,
   const accents = useMemo(() => font.glyphs.filter(isAccent), [font])
   const [query, setQuery] = useState('')
   // accents you don't use: greyed out in the list (right-click to toggle), remembered
-  const [muted, setMuted] = useState<Set<string>>(() => new Set(stored<string[]>('forge.accentMuted', [])))
+  const [muted, setMuted] = useState<Set<string>>(() => new Set(stored<string[]>('scrifts.accentMuted', [])))
   const toggleMuted = (n: string) => setMuted(m => {
     const next = new Set(m)
     if (!next.delete(n)) next.add(n)
-    localStorage.setItem('forge.accentMuted', JSON.stringify([...next]))
+    localStorage.setItem('scrifts.accentMuted', JSON.stringify([...next]))
     return next
   })
   const absent = useMemo(() => {
@@ -62,11 +62,11 @@ export function AccentView({ font, sel, onSelect, onEditGlyph, guides, onGuides,
     } catch (e) { toast.error('Could not create the accent', { description: (e as Error).message }) }
   }
   // the selected glyph if it is an accent, else the last accent worked on (kept across view switches and restarts), else acute
-  const last = localStorage.getItem('forge.lastAccent')
+  const last = localStorage.getItem('scrifts.lastAccent')
   const accent = sel && accents.some(a => a.name === sel) ? sel
     : last && accents.some(a => a.name === last) ? last
     : accents.find(a => a.name === 'acute')?.name ?? accents[0]?.name ?? null
-  useEffect(() => { if (accent) localStorage.setItem('forge.lastAccent', accent) }, [accent])
+  useEffect(() => { if (accent) localStorage.setItem('scrifts.lastAccent', accent) }, [accent])
   const [data, setData] = useState<Composites | null>(null)
   const [pick, setPick] = useState<number | null>(null)  // index into data.items
   const [off, setOff] = useState<[number, number]>([0, 0])
@@ -87,7 +87,7 @@ export function AccentView({ font, sel, onSelect, onEditGlyph, guides, onGuides,
     } catch (e) { toast.error('Could not make it', { description: (e as Error).message }) } finally { setBusy(false) }
   }
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = Number(localStorage.getItem('forge.accentWidth'))
+    const saved = Number(localStorage.getItem('scrifts.accentWidth'))
     return Number.isFinite(saved) && saved >= 120 ? saved : 180
   })
   const outlineVersion = useOutlineVersion()
@@ -240,19 +240,19 @@ export function AccentView({ font, sel, onSelect, onEditGlyph, guides, onGuides,
               window.removeEventListener('mouseup', onUp)
               document.body.style.cursor = prevCursor
               document.body.style.userSelect = prevSelect
-              localStorage.setItem('forge.accentWidth', String(cur))
+              localStorage.setItem('scrifts.accentWidth', String(cur))
             }
             window.addEventListener('mousemove', onMove)
             window.addEventListener('mouseup', onUp)
           }}
-          onDoubleClick={() => { setSidebarWidth(180); localStorage.setItem('forge.accentWidth', '180') }}
+          onDoubleClick={() => { setSidebarWidth(180); localStorage.setItem('scrifts.accentWidth', '180') }}
           onKeyDown={e => {
             if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
             e.preventDefault()
             const step = e.shiftKey ? 40 : 16
             const next = Math.min(420, Math.max(120, sidebarWidth + (e.key === 'ArrowRight' ? step : -step)))
             setSidebarWidth(next)
-            localStorage.setItem('forge.accentWidth', String(next))
+            localStorage.setItem('scrifts.accentWidth', String(next))
           }}
           className="group absolute inset-y-0 -right-1 z-20 w-2 cursor-col-resize outline-none"
         >

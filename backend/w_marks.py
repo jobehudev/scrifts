@@ -203,7 +203,7 @@ def op_composites(accent):
 
 # ------------------------------------------------------------------ anchors
 
-MARK_LOOKUP = "Forge mark positioning"
+MARK_LOOKUP = "Scrifts mark positioning"
 
 
 def op_anchor_classes():

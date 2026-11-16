@@ -289,7 +289,7 @@ def export_glyphs_file(req: ExportGlyphsReq):
         raise HTTPException(400, "the file name must end in .glyphs")
     if req.family:
         fam = _family(req.family)
-        maps = DesignSpaceDocument.fromfile(req.family).lib.get(glyphs_io.AXIS_MAPS_KEY, {})
+        maps = glyphs_io.lib_get(DesignSpaceDocument.fromfile(req.family).lib, glyphs_io.AXIS_MAPS_KEY, {})
         axes = [{**a, "map": maps.get(a["name"], [])} for a in fam["axes"]]
         masters = [m["path"] for m in fam["masters"]]
         locations = [m["location"] for m in fam["masters"]]

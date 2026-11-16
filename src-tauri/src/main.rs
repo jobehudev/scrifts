@@ -64,7 +64,7 @@ fn spawn_backend(port: u16) -> Result<Child, String> {
     ] {
         if candidate.is_file() {
             let mut cmd = Command::new(&candidate);
-            cmd.env("FORGE_PORT", port.to_string())
+            cmd.env("SCRIFTS_PORT", port.to_string())
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null());
@@ -86,7 +86,7 @@ fn spawn_backend(port: u16) -> Result<Child, String> {
     let mut cmd = Command::new(py);
     cmd.arg(root.join("backend").join("server.py"))
         .current_dir(&root)
-        .env("FORGE_PORT", port.to_string())
+        .env("SCRIFTS_PORT", port.to_string())
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());

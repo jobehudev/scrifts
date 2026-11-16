@@ -2,7 +2,7 @@
 
 Import turns a .glyphs file into what Scrifts already works with: one .sfd per
 master plus a .designspace, in a project folder next to the file
-(`<name>.forge/`). The .glyphs file itself is never changed, and reopening it
+(`<name>.scrifts/`; one made as `<name>.forge/` is still used). The .glyphs file itself is never changed, and reopening it
 opens the project as it is now, so edits made in Scrifts are not overwritten.
 
 What does not survive yet, and is reported instead of dropped silently:
@@ -14,13 +14,20 @@ import logging
 import os
 import shutil
 
-AXIS_MAPS_KEY = "com.forge.axisMaps"
-BRACES_KEY = "com.forge.braces"  # the same list server._family reads: brace layers (sparse masters)
+AXIS_MAPS_KEY = "com.scrifts.axisMaps"
+BRACES_KEY = "com.scrifts.braces"  # the same list server._family reads: brace layers (sparse masters)
+
+
+def lib_get(lib, key, default):
+    """A designspace lib value, also under the key it had before the rename (com.forge.*)."""
+    return lib.get(key, lib.get(key.replace("com.scrifts.", "com.forge."), default))
 
 
 def project_folder(glyphs_path: str) -> str:
     base = os.path.splitext(os.path.abspath(glyphs_path))[0]
-    return base + ".forge"
+    if os.path.isdir(base + ".forge") and not os.path.isdir(base + ".scrifts"):
+        return base + ".forge"  # made before the rename: keep using it, its edits are in there
+    return base + ".scrifts"
 
 
 def import_glyphs(glyphs_path: str, convert_ufo) -> dict:

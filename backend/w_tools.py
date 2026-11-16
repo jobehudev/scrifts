@@ -174,7 +174,7 @@ def op_import_artboards(folder, apply=False, create=True, files=None):
     """Read the Outline layer of every SVG in a folder into the glyph its file name stands for.
     Without apply it only reports what would happen: new / replace / empty (nothing drawn, left alone) / unknown."""
     import artboards
-    report, tmp = [], os.path.join(folder, ".forge-import.svg")
+    report, tmp = [], os.path.join(folder, ".scrifts-import.svg")
     for fn in sorted(os.listdir(folder)):
         if not fn.lower().endswith(".svg") or fn.startswith("."):
             continue

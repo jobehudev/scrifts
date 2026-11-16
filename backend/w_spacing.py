@@ -17,7 +17,7 @@ from w_font import _DEPS, _outline
 # its first classes (even if the right glyph is in no class: value of class
 # 0). The effective kern is the sum over lookups.
 
-KERN_LOOKUP = "Forge kerning"
+KERN_LOOKUP = "Scrifts kerning"
 
 
 def _kern_lookups():
@@ -90,7 +90,7 @@ def _set_pair(st, left, right, value):
         g.addPosSub(st, right, int(round(value)))
 
 
-GROUPS_SUBTABLE = "Forge kerning groups"
+GROUPS_SUBTABLE = "Scrifts kerning groups"
 
 
 def op_kern_groups():

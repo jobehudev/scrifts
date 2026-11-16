@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
 _BUNDLED_FF = ROOT / "FontForgeBuilds" / "bin" / "ffpython.exe"
-FFPYTHON = os.environ.get(
+FFPYTHON = os.environ.get("SCRIFTS_FFPYTHON") or os.environ.get(  # FORGE_FFPYTHON: the name before the rename
     "FORGE_FFPYTHON",
     str(_BUNDLED_FF) if _BUNDLED_FF.exists() else r"C:\Program Files\FontForgeBuilds\bin\ffpython.exe",
 )

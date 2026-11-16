@@ -178,16 +178,16 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   /** turns the master bar's weight preview off */
   onStopPreview?: () => void
 }) {
-  const [text, setText] = useState(() => localStorage.getItem('forge.spacing.' + font.familyname) ?? localStorage.getItem('forge.spacing') ?? 'HHOHOO nnonoo Hamburgefontsiv /a/b/c')
+  const [text, setText] = useState(() => localStorage.getItem('scrifts.spacing.' + font.familyname) ?? localStorage.getItem('scrifts.spacing') ?? 'HHOHOO nnonoo Hamburgefontsiv /a/b/c')
   const [size, setSize] = useState(140)
   // proofing: colours, sizes, paragraph, lines. All local to this view, remembered between sessions.
-  const stored = <T,>(key: string, init: T) => { try { const v = localStorage.getItem('forge.proof.' + key); return v === null ? init : JSON.parse(v) as T } catch { return init } }
-  const keep = (key: string, v: unknown) => localStorage.setItem('forge.proof.' + key, JSON.stringify(v))
+  const stored = <T,>(key: string, init: T) => { try { const v = localStorage.getItem('scrifts.proof.' + key); return v === null ? init : JSON.parse(v) as T } catch { return init } }
+  const keep = (key: string, v: unknown) => localStorage.setItem('scrifts.proof.' + key, JSON.stringify(v))
   const [colors, setColors] = useState<Pair | null>(() => stored<Pair | null>('colors', null))
   const [badge, setBadge] = useState(() => stored('badge', true))
   const [texts, setTexts] = useState<string[]>(() => stored<string[]>('texts', []))
   const saveTexts = (v: string[]) => { keep('texts', v); setTexts(v) }
-  const [swatches, setSwatches] = useState<Pair[]>(() => readSwatches(localStorage.getItem('forge.proof.swatches')))
+  const [swatches, setSwatches] = useState<Pair[]>(() => readSwatches(localStorage.getItem('scrifts.proof.swatches')))
   const [waterfall, setWaterfall] = useState(() => stored('waterfall', false))
   const [para, setPara] = useState(() => stored('para', false))
   const [lineHeight, setLineHeight] = useState(() => stored('lh', 1.3))
@@ -212,19 +212,19 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const pending = useRef(new Map<string, Metrics>())  // target metrics not yet confirmed
   const inflight = useRef(new Set<string>())
   const undo = useRef<UndoStep[]>([])
-  const [kernOn, setKernOn] = useState(() => localStorage.getItem('forge.kern') !== '0')
+  const [kernOn, setKernOn] = useState(() => localStorage.getItem('scrifts.kern') !== '0')
   const [kerns, setKerns] = useState<Map<string, Kern>>(new Map())
   const kernPending = useRef(new Map<string, { value: number | null; mode: 'auto' | 'pair' }>())
   const kernInflight = useRef(new Set<string>())
   const [kernMode, setKernMode] = useState<'auto' | 'pair'>('auto')
-  const [groupsOpen, setGroupsOpen] = useState(() => localStorage.getItem('forge.groups') === '1')
+  const [groupsOpen, setGroupsOpen] = useState(() => localStorage.getItem('scrifts.groups') === '1')
   const [kernRev, setKernRev] = useState(0)  // bump after group changes: every pair may have moved
   const kernDrag = useRef<{ l: string; r: string; px: number; v0: number; recorded: boolean; s: number } | null>(null)
   const boxes = useRef<Box[]>([])
   const canvasWrap = useRef<HTMLDivElement>(null)
   useOutlineVersion(reference?.store)
   const [showRef, setShowRef] = useState(true)
-  const [shadows, setShadows] = useState(() => localStorage.getItem('forge.shadows') === '1')
+  const [shadows, setShadows] = useState(() => localStorage.getItem('scrifts.shadows') === '1')
   const [edgeHover, setEdgeHover] = useState<{ i: number; side: 'L' | 'R' } | null>(null)  // the edge a click would grab, highlighted
   const edgeDrag = useRef<{ name: string; side: 'L' | 'R'; px: number; m: Metrics; s: number } | null>(null)
   /** Base letter of an accented one (É -> E), for shadow comparison. */
@@ -240,7 +240,7 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const refByCp = useMemo(() => new Map((reference?.info.glyphs ?? []).filter(g => g.unicode >= 0).map(g => [g.unicode, g.name])), [reference])
   const cpOf = useMemo(() => new Map(font.glyphs.map(g => [g.name, g.unicode])), [font])
 
-  const [variantsOn, setVariantsOn] = useState(() => localStorage.getItem('forge.variants') === '1')
+  const [variantsOn, setVariantsOn] = useState(() => localStorage.getItem('scrifts.variants') === '1')
   const variantsOf = useMemo(() => variantMap(font), [font])
   // lit up only when the text has a letter that has accented forms in this font
   const hasVariants = useMemo(() => [...text].some(c => variantsOf.has(c.codePointAt(0)!)), [text, variantsOf])
@@ -292,7 +292,7 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const editable = !loc && !blending
   const current = run[cursor]
 
-  useEffect(() => { localStorage.setItem('forge.spacing.' + font.familyname, text); localStorage.setItem('forge.spacing', text) }, [text, font.familyname])
+  useEffect(() => { localStorage.setItem('scrifts.spacing.' + font.familyname, text); localStorage.setItem('scrifts.spacing', text) }, [text, font.familyname])
   useEffect(() => { api<typeof keys>('/api/metrics-keys').then(setKeys).catch(() => {}) }, [font, keyRev])
   // underline and strikeout come from the font itself
   useEffect(() => {
@@ -735,7 +735,7 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   const cur = colors ?? PRESETS[1].pair  // what the pickers show while the app theme is in use
   const ratio = colors ? contrast(colors.fg, colors.bg) : null
   const setPair = (p: Pair | null) => { keep('colors', p); setColors(p) }
-  const saveSwatches = (v: Pair[]) => { localStorage.setItem('forge.proof.swatches', JSON.stringify(v)); setSwatches(v) }
+  const saveSwatches = (v: Pair[]) => { localStorage.setItem('scrifts.proof.swatches', JSON.stringify(v)); setSwatches(v) }
 
   return (
     <div className="flex h-full flex-col">
@@ -749,21 +749,21 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
         <Slider className="w-28" min={8} max={480} step={1} value={[size]} disabled={waterfall} onValueChange={v => setSize(v[0])} />
         <Button size="xs" variant={kernOn ? 'secondary' : 'ghost'} aria-pressed={kernOn}
           title="Show the text with its kerning (on) or without (off), to compare. Off only changes what you see here: the kerning stays in the font."
-          onClick={() => { localStorage.setItem('forge.kern', kernOn ? '0' : '1'); setKernOn(!kernOn) }}>
+          onClick={() => { localStorage.setItem('scrifts.kern', kernOn ? '0' : '1'); setKernOn(!kernOn) }}>
           Kerning {kernOn ? 'on' : 'off'}
         </Button>
         <Button size="xs" variant={groupsOpen ? 'secondary' : 'ghost'} title="Kerning groups"
-          onClick={() => { localStorage.setItem('forge.groups', groupsOpen ? '0' : '1'); setGroupsOpen(!groupsOpen) }}>
+          onClick={() => { localStorage.setItem('scrifts.groups', groupsOpen ? '0' : '1'); setGroupsOpen(!groupsOpen) }}>
           Groups
         </Button>
         <Button size="xs" variant={shadows ? 'secondary' : 'ghost'}
           title="Draw each accented letter's base behind it (É over E) with the base's advance, and the width difference"
-          onClick={() => { localStorage.setItem('forge.shadows', shadows ? '0' : '1'); setShadows(!shadows) }}>
+          onClick={() => { localStorage.setItem('scrifts.shadows', shadows ? '0' : '1'); setShadows(!shadows) }}>
           Shadow bases
         </Button>
         <Button size="xs" variant={variantsOn && hasVariants ? 'secondary' : 'ghost'} disabled={!hasVariants}
           title={hasVariants ? 'After each letter that has accented forms (A), also show them (À Á Â Ã Ä Å ...), side by side' : 'Type a letter that has accented forms, like A or e, to use this'}
-          onClick={() => { localStorage.setItem('forge.variants', variantsOn ? '0' : '1'); setVariantsOn(!variantsOn) }}>
+          onClick={() => { localStorage.setItem('scrifts.variants', variantsOn ? '0' : '1'); setVariantsOn(!variantsOn) }}>
           Accented variants
         </Button>
         {reference && (
