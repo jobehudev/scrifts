@@ -145,7 +145,6 @@ The Windows installer includes FontForge's own Windows build, unchanged
 (GPL-3.0-or-later, [source](https://github.com/fontforge/fontforge)); its licence is installed with the app. Other
 libraries and their licences are in [CREDITS.md](CREDITS.md).
 
-## Star history
 
 <a href="https://star-history.com/#jobehudev/scrifts&Date">
   <picture>
