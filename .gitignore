@@ -13,3 +13,6 @@ WebView2Loader.dll
 
 packaging/out/
 packaging_build.log
+
+# private notes
+TODO.md
