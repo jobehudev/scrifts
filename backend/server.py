@@ -23,8 +23,18 @@ from core import TTFont, _call, subprocess, variables  # noqa: F401
 _DIST = ROOT / "frontend" / "dist"
 
 
+class _Fresh(StaticFiles):
+    """The app is served from this machine, so always revalidate: otherwise the desktop shell's browser keeps showing
+    the previous version's index.html after an upgrade."""
+
+    async def get_response(self, path, scope):
+        r = await super().get_response(path, scope)
+        r.headers["Cache-Control"] = "no-cache"
+        return r
+
+
 if _DIST.is_dir():
-    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="frontend")
+    app.mount("/", _Fresh(directory=str(_DIST), html=True), name="frontend")
 
 
 if __name__ == "__main__":
