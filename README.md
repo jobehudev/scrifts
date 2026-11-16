@@ -133,7 +133,7 @@ NSIS installer at `src-tauri/target/release/bundle/nsis/Scrifts_<version>_x64-se
 
 ## Roadmap and contributing
 
-What's next is in [ROADMAP.md](ROADMAP.md). Not taking pull requests yet, but bug reports and ideas are welcome as
+What is planned is tracked as [issues labelled `roadmap`](https://github.com/jobehudev/scrifts/issues?q=is%3Aissue+label%3Aroadmap). Not taking pull requests yet, but bug reports and ideas are welcome as
 issues.
 
 ## Licence
