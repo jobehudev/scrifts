@@ -37,12 +37,13 @@ let inflight = new AbortController()
 
 /** The font this page shows. Every call is addressed to it, so another tab or
  *  script opening a font can never swap what this page draws. */
-export const session = { fid: 0, onGone: null as (() => void) | null }
+export const session = { fid: 0, onGone: null as (() => void) | null, stack: false }  // stack: the "Allow overlap" preference, sent with every outline edit
 
 export async function api<T>(url: string, body?: unknown): Promise<T> {
   const fid = session.fid
   if (fid && body === undefined) url += (url.includes('?') ? '&' : '?') + 'fid=' + fid
   if (fid && body && typeof body === 'object' && !('fid' in body)) body = { ...body, fid }
+  if (session.stack && url === '/api/edit' && body && typeof body === 'object') body = { ...body, stack: true }
   // the font this call is really about: a ghost's or a reference's going away is not this page's font going away
   const sent = body && typeof body === 'object' && 'fid' in body ? (body as { fid: unknown }).fid : fid
   const r = await fetch(url, {

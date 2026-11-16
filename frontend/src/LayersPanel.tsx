@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronRight, Eye, EyeOff, Info, Lock, LockOpen, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, contourPath, type Anchor, type AnchorClass, type Points } from './api'
 import { parseStroke } from './strokes'
+import { invertedShapes } from './inversions'
 import { theme } from './canvas'
 import { useNarrow } from './narrow'
 import { setSettings, useSettings } from './settings'
@@ -98,6 +99,7 @@ export function LayersPanel({ pts, quadratic, selected, editable, hidden, locked
   /** an accent: its anchor is _top (the point that sits on a letter's top), not top */
   isAccent?: boolean
 }) {
+  const inverted = useMemo(() => invertedShapes(pts.contours.map((contour, i) => ({ contour, closed: pts.shapes[i]?.closed ?? true, cw: pts.shapes[i]?.cw ?? null }))), [pts])  // shapes that cut others out, tagged [inv]
   const [newCls, setNewCls] = useState(isAccent ? '_top' : 'top')
   useEffect(() => { setNewCls(isAccent ? '_top' : 'top') }, [isAccent])
   const [newGuide, setNewGuide] = useState('')
@@ -164,6 +166,7 @@ export function LayersPanel({ pts, quadratic, selected, editable, hidden, locked
           <TooltipContent className="max-w-64">
             Fonts are one colour, so shapes don't sit on top of each other. Overlapping shapes going the same
             way merge; the opposite way cuts a hole. ↻ clockwise, ↺ counter-clockwise. Drag rows to change drawing order.
+            Font info, Drawing has Allow overlap, which makes crossing shapes always merge.
           </TooltipContent>
         </Tooltip>
       </div>
@@ -199,6 +202,7 @@ export function LayersPanel({ pts, quadratic, selected, editable, hidden, locked
                   {stroke ? `Stroke · ${stroke.width}` : pts.shapes[ci]?.name || `Shape ${ci + 1}`}
                 </span>
               )}
+              {inverted.has(ci) && <span className="shrink-0 font-mono text-[10px] text-primary" title="Inversion: runs against the shapes it meets, so it cuts them out instead of adding to them">[inv]</span>}
               <span className="w-3 text-center text-muted-foreground" title={pts.shapes[ci]?.closed === false ? 'open path' : pts.shapes[ci]?.cw ? 'clockwise' : 'counter-clockwise'}>
                 {pts.shapes[ci]?.closed === false ? '–' : pts.shapes[ci]?.cw ? '↻' : '↺'}
               </span>

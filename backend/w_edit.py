@@ -69,6 +69,85 @@ def _bez(c, t):
     return tuple(u**3 * c[0][n] + 3 * u * u * t * c[1][n] + 3 * u * t * t * c[2][n] + t**3 * c[3][n] for n in (0, 1))
 
 
+def _outline(c):
+    """A closed contour as a polygon: its curves sampled, so it can be asked what lies inside it."""
+    pts = [(p.x, p.y, bool(p.on_curve)) for p in c]
+    start = next((i for i, p in enumerate(pts) if p[2]), None)
+    if start is None:
+        return [(x, y) for x, y, _ in pts]
+    pts = pts[start:] + pts[:start]
+    n, out, a, k = len(pts), [], pts[0][:2], 1
+    out.append(a)
+    while True:
+        offs = []
+        while k < n and not pts[k][2]:
+            offs.append(pts[k][:2])
+            k += 1
+        b = pts[k][:2] if k < n else pts[0][:2]
+        if len(offs) == 2:  # cubic
+            out += [_bez((a, offs[0], offs[1], b), t / 8) for t in range(1, 9)]
+        elif len(offs) == 1:  # quadratic
+            out += [tuple((1 - t / 8) ** 2 * a[m] + 2 * (1 - t / 8) * (t / 8) * offs[0][m] + (t / 8) ** 2 * b[m] for m in (0, 1)) for t in range(1, 9)]
+        else:  # a line, or a run of off-curve points of an implied-point quadratic: through them is close enough to ask what is inside
+            out += offs + [b]
+        if k >= n:
+            return out
+        a, k = b, k + 1
+
+
+def _inside(pt, poly):
+    x, y, hit = pt[0], pt[1], False
+    for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]):
+        if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
+            hit = not hit
+    return hit
+
+
+def _area(poly):
+    return abs(sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]))) / 2
+
+
+def _stack(layer):
+    """'Allow overlap': shapes that cross or touch sit on top of each other and merge, whichever way they were drawn. All the shapes that
+    are not inside another one are turned to run the same way (the way the biggest already does, so a font's own convention stands). A shape
+    lying wholly inside another keeps the direction it had *relative to it*: drawn the same way it is just more ink on top, drawn the
+    other way it is a counter. A deliberate cut is made with the Shape Builder, which really removes the ink. Contours are turned in
+    place, never moved."""
+    n = len(layer)
+    if n < 2 or n > 40:
+        return layer
+    polys = [_outline(c) if c.closed and len(c) >= 3 else None for c in layer]
+    areas = [_area(p) if p else 0 for p in polys]
+    order = sorted((i for i in range(n) if polys[i]), key=lambda i: -areas[i])  # biggest first, so a shape's container is settled before it
+    dirs = [c.isClockwise() for c in layer]
+    parent = {}
+    for i in order:
+        best = None  # the smallest shape that holds this one
+        for j in order:
+            if j != i and areas[j] > areas[i] + 1e-6 and (best is None or areas[j] < areas[best]):
+                if sum(_inside(pt, polys[j]) for pt in polys[i]) >= 0.9 * len(polys[i]):  # edges the two share can fall either side
+                    best = j
+        if best is not None:
+            parent[i] = best
+    tops = [i for i in order if i not in parent and dirs[i] in (0, 1)]
+    if not tops:
+        return layer
+    want = dirs[tops[0]]  # the biggest free-standing shape sets the way
+    turn = {}
+    for i in order:
+        if dirs[i] not in (0, 1):
+            turn[i] = False  # crosses itself: leave it
+        elif i in parent:
+            turn[i] = turn.get(parent[i], False)  # goes with its container, so the way it sits in it stays
+        else:
+            turn[i] = dirs[i] != want
+    for i in order:
+        if turn[i]:
+            c = layer[i]
+            c.reverseDirection()
+            layer[i] = c
+    return layer
+
 def _edit(g, f):
     """Apply f to a copy of the foreground layer, with FontForge's own undo."""
     g.preserveLayerAsUndo(1)
@@ -374,6 +453,7 @@ def op_edit(name, kind, **a):
         "pathfinder": pathfinder, "shape_build": shape_build, "transform": transform, "add_contour": add_contour, "round_corners": round_corners,
         "move": move, "delete_points": delete_points, "reorder": reorder, "reverse": reverse,
         "delete_contours": lambda layer: _without(layer, a["contours"]),
+        "stack": lambda layer: layer,  # changes nothing itself: with "Allow overlap" on, the edit ends by stacking the shapes
         "remove_overlap": lambda layer: layer.removeOverlap(),
         "correct_direction": lambda layer: layer.correctDirection(),
         "add_extrema": lambda layer: layer.addExtrema(),
@@ -450,7 +530,8 @@ def op_edit(name, kind, **a):
                 layer[ci] = c
         g.foreground = layer
         return op_points(name)
-    _edit(g, ops[kind])
+    f = ops[kind]
+    _edit(g, (lambda layer: _stack(f(layer) or layer)) if a.get("stack") else f)  # "Allow overlap" is on: shapes end up stacked
     return op_points(name)
 
 

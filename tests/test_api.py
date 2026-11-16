@@ -2123,3 +2123,62 @@ def test_blend_draws_glyphs_made_of_components(client, tmp_path):
     r = client.post("/api/family/split", json={"fid": info["fid"], "path": str(tmp_path / "Comp")}).json()
     b = client.post("/api/family/blend", json={"path": r["designspace"], "weight": 250, "names": ["nine"]}).json()
     assert b["nine"] and b["nine"]["contours"] and b["nine"]["refs"] == []  # a nine is a six turned round: nothing to draw without its component
+
+
+def _signed(contour):
+    return sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(contour, contour[1:] + contour[:1])) / 2
+
+
+@pytest.mark.skipif(not SFD.exists(), reason="run tests/fetch_fixtures.sh")
+def test_allow_overlap_stacks_crossing_shapes(client):
+    """With "Allow overlap" on, a shape drawn the other way round that crosses another merges with it instead of cutting it out;
+    a shape wholly inside another is still a hole; with it off, directions are left as drawn."""
+    cw = lambda x0, y0, x1, y1: [[x0, y0, 1], [x0, y1, 1], [x1, y1, 1], [x1, y0, 1]]
+    def draw(name, stack):
+        fid = client.post("/api/open", json={"path": str(SFD)}).json()["fid"]
+        client.post("/api/create", json={"fid": fid, "name": name})
+        g = None
+        for pts in (cw(0, 0, 400, 400), cw(300, 300, 700, 700)[::-1], cw(100, 100, 200, 200)[::-1]):  # a body, a crossing shape drawn backwards, a counter
+            g = client.post("/api/edit", json={"fid": fid, "name": name, "kind": "add_contour", "stack": stack, "args": {"points": pts, "closed": True}}).json()
+        return [_signed(c) for c in g["contours"]]
+    off = draw("stack_off", False)
+    assert off[0] * off[1] < 0  # as drawn: the crossing shape runs against the body
+    on = draw("stack_on", True)
+    assert on[0] * on[1] > 0  # the crossing shape now runs with the body, so the two merge
+    assert on[0] * on[2] < 0  # the shape inside the body is still a hole
+
+
+@pytest.mark.skipif(not SFD.exists(), reason="run tests/fetch_fixtures.sh")
+def test_allow_overlap_switched_on_stacks_an_existing_glyph(client):
+    """A glyph drawn with the setting off (a bar running against its stems) is stacked the moment the setting goes on, with no other edit."""
+    rect = lambda x0, y0, x1, y1: [[x0, y0, 1], [x0, y1, 1], [x1, y1, 1], [x1, y0, 1]]
+    fid = client.post("/api/open", json={"path": str(SFD)}).json()["fid"]
+    client.post("/api/create", json={"fid": fid, "name": "stack_h"})
+    e = lambda kind, stack, **a: client.post("/api/edit", json={"fid": fid, "name": "stack_h", "kind": kind, "stack": stack, "args": a}).json()
+    e("add_contour", False, points=rect(0, 0, 100, 800), closed=True)
+    e("add_contour", False, points=rect(400, 0, 500, 800), closed=True)
+    g = e("add_contour", False, points=rect(30, 300, 470, 400)[::-1], closed=True)
+    assert _signed(g["contours"][2]) * _signed(g["contours"][0]) < 0  # the bar cuts the stems out
+    g = e("stack", True)
+    assert all(_signed(c) * _signed(g["contours"][0]) > 0 for c in g["contours"])  # now all three go the same way and merge
+
+
+@pytest.mark.skipif(not SFD.exists(), reason="run tests/fetch_fixtures.sh")
+def test_allow_overlap_shape_inside_another(client):
+    """A shape wholly inside another keeps its direction relative to it: the same way is more ink on top (no hole), the other way a counter.
+    The direction of the whole group is never forced, so a font that draws its outlines counter-clockwise stays that way."""
+    cw = lambda x0, y0, x1, y1: [[x0, y0, 1], [x0, y1, 1], [x1, y1, 1], [x1, y0, 1]]
+    def draw(name, shapes):
+        fid = client.post("/api/open", json={"path": str(SFD)}).json()["fid"]
+        client.post("/api/create", json={"fid": fid, "name": name})
+        g = None
+        for pts in shapes:
+            g = client.post("/api/edit", json={"fid": fid, "name": name, "kind": "add_contour", "stack": True, "args": {"points": pts, "closed": True}}).json()
+        return [_signed(c) for c in g["contours"]]
+    same = draw("inside_same", [cw(0, 0, 400, 400), cw(100, 100, 200, 200)])
+    assert same[0] * same[1] > 0  # on top, so no hole
+    hole = draw("inside_hole", [cw(0, 0, 400, 400), cw(100, 100, 200, 200)[::-1]])
+    assert hole[0] * hole[1] < 0  # drawn as a counter, so it stays one
+    # an outline that runs counter-clockwise, with a counter, crossed by a shape drawn clockwise: all turn to the outline's way, the counter with it
+    both = draw("inside_ccw", [cw(0, 0, 400, 400)[::-1], cw(100, 100, 200, 200), cw(300, 300, 600, 600)])
+    assert both[0] > 0 and both[2] > 0 and both[1] < 0  # the outline stays counter-clockwise (positive here), the crossing shape joins it, the counter still runs the other way

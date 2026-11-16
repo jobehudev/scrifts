@@ -4,6 +4,7 @@ import { api } from './api'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -38,8 +39,9 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /** Names, metrics and licence of the open font, read from and written by FontForge. */
-export function FontInfoDialog({ open, onOpenChange, onSaved }: {
+export function FontInfoDialog({ open, onOpenChange, onSaved, allowOverlap, onAllowOverlap }: {
   open: boolean; onOpenChange: (o: boolean) => void; onSaved: (familyname: string, fontname: string) => void
+  allowOverlap: boolean; onAllowOverlap: (on: boolean) => void
 }) {
   const [info, setInfo] = useState<Info | null>(null)
   const [saving, setSaving] = useState(false)
@@ -103,6 +105,7 @@ export function FontInfoDialog({ open, onOpenChange, onSaved }: {
             <TabsTrigger value="names">Names</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
             <TabsTrigger value="license">License</TabsTrigger>
+            <TabsTrigger value="drawing">Drawing</TabsTrigger>
           </TabsList>
 
           <TabsContent value="names" className="pt-2">
@@ -196,6 +199,18 @@ export function FontInfoDialog({ open, onOpenChange, onSaved }: {
                 {!EMBEDDING.some(([v]) => v === +f('os2_fstype')) && <option value={f('os2_fstype')}>Other ({f('os2_fstype')})</option>}
               </Select>
             </Field>
+          </TabsContent>
+          <TabsContent value="drawing" className="pt-2">
+            <Field label="Allow overlap" hint="Applies at once; not part of Save">
+              <Switch checked={allowOverlap} onCheckedChange={onAllowOverlap} label="Allow overlap" />
+              <span className="text-xs text-muted-foreground">{allowOverlap ? 'On: shapes stack' : 'Off: direction decides'}</span>
+            </Field>
+            <p className="mt-2 text-xs text-muted-foreground">
+              On, shapes that cross sit on top of each other and merge, even when drawn the other way round. A shape wholly inside another is
+              still a hole, and the Shape Builder (Alt-drag a region) cuts one out. Leave it off for a font that relies on opposite-direction
+              shapes cutting each other out: when on, every edit turns shapes round so they merge. It applies to edits you make from now on.
+              The choice is kept for this project (all of a family's masters) on this computer, not written into the font file.
+            </p>
           </TabsContent>
         </Tabs>
         <DialogFooter>

@@ -196,7 +196,14 @@ export function GlyphGrid({ font, sel, loc, family = null, weight = null, axisVa
       ctx.font = '10px ' + t.mono
       ctx.fillStyle = i === selIdx ? t.ink : t.dim
       const name = g.name ?? hex(g.unicode)
-      ctx.fillText(name.length > 11 ? name.slice(0, 10) + '…' : name, x + cell / 2, y + cell - 4)
+      // shorten to what fits the cell (with a margin), so a long name never runs into the next cell's
+      let label = name
+      const room = cell - 8
+      if (ctx.measureText(label).width > room) {
+        while (label.length > 1 && ctx.measureText(label + '…').width > room) label = label.slice(0, -1)
+        label += '…'
+      }
+      ctx.fillText(label, x + cell / 2, y + cell - 4)
       if (g.name && marks?.has(g.name)) {
         ctx.fillStyle = t.bad
         ctx.beginPath(); ctx.arc(x + cell - 7, y + 7, 3, 0, Math.PI * 2); ctx.fill()

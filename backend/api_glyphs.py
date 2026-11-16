@@ -225,12 +225,13 @@ class EditReq(FontReq):
     name: str
     kind: str
     args: dict = {}
+    stack: bool = False  # the "Allow overlap" preference: crossing shapes end up merged, not cutting each other out
 
 
 @app.post("/api/edit")
 def edit(req: EditReq):
     """Outline edits on the default master (see worker.op_edit for kinds)."""
-    return _call("edit", fid=req.fid, name=req.name, kind=req.kind, **req.args)
+    return _call("edit", fid=req.fid, name=req.name, kind=req.kind, stack=req.stack, **req.args)
 
 
 class RegionsReq(FontReq):

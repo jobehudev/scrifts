@@ -202,6 +202,12 @@ export default function App() {
   const everNew = useEver(newOpen), everSettings = useEver(settingsOpen)
   const [uiFontRev, setUiFontRev] = useState(0)  // bump to rebuild the UI font from the current outlines
   const settings = useSettings()
+  // Allow Overlap belongs to the project, not the app: a font that leans on overlapping shapes cutting each other out would be ruined by it.
+  // Kept per project (a family's masters share one), off until switched on; outline edits carry it to the backend.
+  const overlapKey = font ? 'forge.overlap:' + (family?.path ?? font.path) : null
+  const [overlapOn, setOverlapOn] = useState(false)
+  useEffect(() => { setOverlapOn(!!overlapKey && localStorage.getItem(overlapKey) === '1') }, [overlapKey])
+  session.stack = !!overlapKey && overlapOn
   // the start screen wordmark: the lighter of the theme's background and accent, so it always belongs to the theme
   const [logoColour, setLogoColour] = useState('#fff')
   useEffect(() => {
@@ -508,6 +514,15 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
   const afterBulkEdit = useCallback(() => {
     outlines.clear(); for (const g of ghostsRef.current) g.store.clear(); void refresh(); setBlendRev(r => r + 1)
   }, [refresh])
+  // Switching it on also stacks the shapes of the glyph that is open now, so the change shows at once; the rest follow as they are edited.
+  const setAllowOverlap = useCallback((on: boolean) => {
+    if (overlapKey) localStorage.setItem(overlapKey, on ? '1' : '0')
+    setOverlapOn(on)
+    if (on && sel) {
+      session.stack = true
+      void api('/api/edit', { name: sel, kind: 'stack', args: {} }).then(afterBulkEdit).catch(e => toast.error('Could not stack the shapes', { description: (e as Error).message }))
+    }
+  }, [overlapKey, sel, afterBulkEdit])
 
   /** Ctrl Alt Z: the last plugin, script, rename or other change across the font, taken back (the worker kept a copy from just before it). */
   const undoFont = useCallback(() => run('Undo', async () => {
@@ -924,7 +939,8 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       {font && artMode && <Suspense fallback={null}><ArtboardDialog mode={artMode} font={font} onClose={() => setArtMode(null)} onDone={() => { outlines.clear(); for (const g of ghostsRef.current) g.store.clear(); void refresh(); setBlendRev(r => r + 1) }} /></Suspense>}
       {font && pluginOpen && <Suspense fallback={null}><PluginDialog plugin={plugins.find(p => p.id === pluginOpen) ?? null} sel={sel} onClose={() => setPluginOpen(null)} onRan={() => { outlines.clear(); for (const g of ghostsRef.current) g.store.clear(); void refresh(); setBlendRev(r => r + 1) }} /></Suspense>}
       {font && everInfo && <Suspense fallback={null}><FontInfoDialog open={infoOpen} onOpenChange={setInfoOpen}
-        onSaved={(familyname, fontname) => setFont(f => f && { ...f, familyname, fontname })} /></Suspense>}
+        onSaved={(familyname, fontname) => setFont(f => f && { ...f, familyname, fontname })}
+        allowOverlap={overlapOn} onAllowOverlap={setAllowOverlap} /></Suspense>}
       {font && everInterp && <Suspense fallback={null}><InterpolateDialog open={interpOpen} onOpenChange={setInterpOpen} font={font} sel={sel} onDone={n => { setSel(n); void refresh() }} /></Suspense>}
       {font && everGen && <Suspense fallback={null}><GenerateDialog open={genOpen} onOpenChange={setGenOpen} font={font} family={family} onValidate={() => { setGenOpen(false); setValidateOpen(true) }} /></Suspense>}
       {font && everValidate && <Suspense fallback={null}><ValidateDialog open={validateOpen} onOpenChange={setValidateOpen} onChanged={refresh}
