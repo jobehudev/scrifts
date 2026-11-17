@@ -1347,22 +1347,24 @@ def test_snapshots_create_compare_restore(client, tmp_path):
 
 
 def test_insert_point_on_existing_path(client, tmp_path):
-    path = _caps_sample(tmp_path)
+    path = _sample_copy(tmp_path)
     fid = client.post("/api/open", json={"path": path}).json()["fid"]
     e = lambda name, **args: client.post("/api/edit", json={"fid": fid, "name": name, "kind": "insert_point", "args": args})
-    # a straight edge: one more point, outline unchanged
-    before = client.get("/api/glyph/I", params={"fid": fid}).json()["contours"][0]
-    r = e("I", x=68, y=350, tol=20).json()
+    # a straight edge (l's left side): one more point, outline unchanged
+    before = client.get("/api/glyph/l", params={"fid": fid}).json()["contours"][0]
+    x0, ymid = min(p[0] for p in before), round((min(p[1] for p in before) + max(p[1] for p in before)) / 2)
+    r = e("l", x=x0, y=ymid, tol=20).json()
     after = r["contours"][0]
-    assert len(after) == len(before) + 1 and any(p[0] == 68 and abs(p[1] - 350) < 2 for p in after)
-    # a curve: split in two, the new point on it, the shape the same
-    ring = client.get("/api/glyph/O", params={"fid": fid}).json()["contours"]
+    assert len(after) == len(before) + 1 and any(p[0] == x0 and abs(p[1] - ymid) < 2 for p in after)
+    # a curve of o: split in two, the new point on it, the shape the same
+    ring = client.get("/api/glyph/o", params={"fid": fid}).json()["contours"]
     outer = max(ring, key=lambda c: max(p[0] for p in c))
-    r = e("O", x=320 + 270 * 0.7071, y=350 + 350 * 0.7071, tol=30).json()
+    x, y = _curve_middle(outer)
+    r = e("o", x=x, y=y, tol=10).json()
     assert sum(len(c) for c in r["contours"]) == sum(len(c) for c in ring) + 3
     assert max(p[0] for c in r["contours"] for p in c) == max(p[0] for p in outer)
     # nothing near: refused
-    assert e("I", x=900, y=900, tol=10).status_code >= 400
+    assert e("l", x=900, y=900, tol=10).status_code >= 400
 
 
 def test_missing_paths(client, tmp_path):
@@ -1394,16 +1396,26 @@ def test_sample_font_for_first_run(client, tmp_path):
     assert len(client.get("/api/glyph/l", params={"fid": fid}).json()["contours"]) == 2
 
 
-def _caps_sample(folder):
-    """The old sample font (HELOITF from bars and a ring, spacing 68): the editing tests rely on its exact shapes,
-    so they keep it as a file of their own while the shipped sample changes."""
+def _sample_copy(folder):
+    """A copy of the sample font that ships (a to z): the tests edit the copy, never the shipped file.
+    They read sizes from its outlines rather than hard-coding them, so the sample can be redrawn."""
     import shutil
     os.makedirs(folder, exist_ok=True)
-    return shutil.copy(Path(__file__).with_name("sample-caps.sfd"), os.path.join(folder, "Scrifts Sample.sfd"))
+    return shutil.copy(Path(__file__).resolve().parents[1] / "backend" / "Scrifts Sample.sfd", os.path.join(folder, "Scrifts Sample.sfd"))
+
+
+def _curve_middle(contour):
+    """The middle of the first curve segment (on, off, off, on) of a contour."""
+    n = len(contour)
+    for i in range(n):
+        a, b, c, d = (contour[(i + k) % n] for k in range(4))
+        if a[2] and not b[2] and not c[2] and d[2]:
+            return tuple(0.125 * a[j] + 0.375 * b[j] + 0.375 * c[j] + 0.125 * d[j] for j in (0, 1))
+    raise AssertionError("no curve")
 
 
 def _open_sample(client, tmp_path):
-    path = _caps_sample(tmp_path / "s")
+    path = _sample_copy(tmp_path / "s")
     return client.post("/api/open", json={"path": path}).json()["fid"]
 
 
@@ -1412,25 +1424,26 @@ def test_artboards_round_trip(client, tmp_path):
     fid = _open_sample(client, tmp_path)
     out = str(tmp_path / "art")
     r = client.post("/api/artboards/export", json={"fid": fid, "folder": out}).json()
-    assert {"H_.svg", "O_.svg", "I_.svg"} <= set(r["files"]) and "space.svg" not in r["files"]
-    svg = open(os.path.join(out, "H_.svg"), encoding="utf8").read()
+    assert {"h.svg", "o.svg", "l.svg"} <= set(r["files"]) and "space.svg" not in r["files"]
+    svg = open(os.path.join(out, "h.svg"), encoding="utf8").read()
+    width = client.get("/api/glyph/h", params={"fid": fid}).json()["width"]
     assert 'id="Metrics"' in svg and 'id="Outline"' in svg and 'height="1000"' in svg
-    assert 'width="1000"' in svg and 'id="right-edge" x1="560"' in svg   # a 1 em square board, the advance as a guide
+    assert 'width="1000"' in svg and f'id="right-edge" x1="{width:g}"' in svg   # a 1 em square board, the advance as a guide
 
     # draw nothing new: a preview then an apply gives the same outlines (rounding aside)
-    before = client.get("/api/glyph/H", params={"fid": fid}).json()["contours"]
+    before = client.get("/api/glyph/h", params={"fid": fid}).json()["contours"]
     prev = client.post("/api/artboards/import", json={"fid": fid, "folder": out}).json()
     assert prev["applied"] is False and {g["status"] for g in prev["glyphs"]} == {"replace"}
     client.post("/api/artboards/import", json={"fid": fid, "folder": out, "apply": True})
-    after = client.get("/api/glyph/H", params={"fid": fid}).json()["contours"]
+    after = client.get("/api/glyph/h", params={"fid": fid}).json()["contours"]
     box = lambda cs: (min(p[0] for c in cs for p in c), min(p[1] for c in cs for p in c),
                       max(p[0] for c in cs for p in c), max(p[1] for c in cs for p in c))
     # partial: only the ticked files are read, the rest are reported as skipped
-    r = client.post("/api/artboards/import", json={"fid": fid, "folder": out, "apply": True, "files": ["I_.svg"]}).json()
-    assert {g["file"]: g["status"] for g in r["glyphs"]}["I_.svg"] == "replace"
-    assert {g["status"] for g in r["glyphs"] if g["file"] != "I_.svg"} == {"skipped"}
+    r = client.post("/api/artboards/import", json={"fid": fid, "folder": out, "apply": True, "files": ["l.svg"]}).json()
+    assert {g["file"]: g["status"] for g in r["glyphs"]}["l.svg"] == "replace"
+    assert {g["status"] for g in r["glyphs"] if g["file"] != "l.svg"} == {"skipped"}
     assert len(after) == len(before) and all(abs(a - b) <= 1 for a, b in zip(box(after), box(before)))
-    o = client.get("/api/glyph/O", params={"fid": fid}).json()
+    o = client.get("/api/glyph/o", params={"fid": fid}).json()
     assert len(o["contours"]) == 2   # the ring kept its hole
 
 
@@ -1480,16 +1493,16 @@ def test_trace_a_picture_into_a_glyph(client, tmp_path):
     assert client.get("/api/trace/image", params={"path": str(pic)}).headers["content-type"] == "image/png"
     assert client.post("/api/trace/preview", json={"path": str(tmp_path / "nope.png")}).status_code == 404
     # baseline at the ring's bottom, 700 units at its top
-    r = client.post("/api/trace/apply", json={"fid": fid, "name": "I", "path": str(pic), "baseline_y": 881, "top_y": 240, "top_units": 700}).json()
+    r = client.post("/api/trace/apply", json={"fid": fid, "name": "l", "path": str(pic), "baseline_y": 881, "top_y": 240, "top_units": 700}).json()
     assert len(r["contours"]) == 2
-    raw = client.post("/api/trace/apply", json={"fid": fid, "name": "L", "path": str(pic), "baseline_y": 881, "top_y": 240, "top_units": 700, "tidy": False}).json()
+    raw = client.post("/api/trace/apply", json={"fid": fid, "name": "i", "path": str(pic), "baseline_y": 881, "top_y": 240, "top_units": 700, "tidy": False}).json()
     assert sum(len(c) for c in r["contours"]) <= sum(len(c) for c in raw["contours"])   # tidying never adds points
     ys = [p[1] for c in r["contours"] for p in c]
     assert abs(min(ys)) < 15 and abs(max(ys) - 700) < 15
-    assert client.get("/api/glyph/I", params={"fid": fid}).json()["width"] > 500
+    assert client.get("/api/glyph/l", params={"fid": fid}).json()["width"] > 500
     blank = tmp_path / "blank.png"
     Image.new("RGB", (50, 50), "white").save(blank)
-    assert client.post("/api/trace/apply", json={"fid": fid, "name": "I", "path": str(blank), "baseline_y": 40, "top_y": 10}).status_code == 400
+    assert client.post("/api/trace/apply", json={"fid": fid, "name": "l", "path": str(blank), "baseline_y": 40, "top_y": 10}).status_code == 400
 
 
 def test_template_sheet_written_on_and_read_back(client, tmp_path):
@@ -1498,27 +1511,29 @@ def test_template_sheet_written_on_and_read_back(client, tmp_path):
     import sheet
     from PIL import Image, ImageDraw
     fid = _open_sample(client, tmp_path)
-    made = client.post("/api/sheet/make", json={"chars": "AHIO a", "folder": str(tmp_path / "sheets")}).json()
-    assert made["pages"] == ["AHIOa"] and os.path.isfile(made["pdf"]) and os.path.isfile(made["files"][0])
+    made = client.post("/api/sheet/make", json={"chars": "ahio A", "folder": str(tmp_path / "sheets")}).json()
+    assert made["pages"] == ["ahioA"] and os.path.isfile(made["pdf"]) and os.path.isfile(made["files"][0])
     page = Image.open(made["files"][0]).convert("RGB")
     d = ImageDraw.Draw(page)
-    x0, y0, _, _ = sheet.cell_box(1)      # H: a single stem, baseline to cap height
+    x0, y0, _, _ = sheet.cell_box(1)      # h: a single stem, baseline to cap height
     d.rectangle((x0 + 60, y0 + sheet.BASELINE - 105, x0 + 90, y0 + sheet.BASELINE), fill="black")
-    x0, y0, _, _ = sheet.cell_box(4)      # a (not in the font yet): a blob
+    x0, y0, _, _ = sheet.cell_box(4)      # A (not in the font yet): a blob
     d.ellipse((x0 + 40, y0 + sheet.BASELINE - 75, x0 + 130, y0 + sheet.BASELINE), fill="black")
     scan = tmp_path / "scan.png"
     page.rotate(1.5, resample=Image.Resampling.BICUBIC, fillcolor="white").save(scan)
-    body = {"fid": fid, "path": str(scan), "chars": "AHIOa"}
+    body = {"fid": fid, "path": str(scan), "chars": "ahioA"}
+    h = lambda: client.get("/api/glyph/h", params={"fid": fid}).json()["contours"]
+    h0 = h()
     prev = client.post("/api/sheet/read", json=body).json()
-    assert [c["char"] for c in prev["cells"]] == ["H", "a"] and prev["applied"] is False
-    assert len(client.get("/api/glyph/H", params={"fid": fid}).json()["contours"]) == 3   # preview changes nothing
-    only_a = client.post("/api/sheet/read", json={**body, "apply": True, "only": "a"}).json()   # tick just the "a"
-    assert [c.get("glyph") for c in only_a["cells"]] == [None, "a"]
-    assert len(client.get("/api/glyph/H", params={"fid": fid}).json()["contours"]) == 3
+    assert [c["char"] for c in prev["cells"]] == ["h", "A"] and prev["applied"] is False
+    assert h() == h0   # preview changes nothing
+    only_a = client.post("/api/sheet/read", json={**body, "apply": True, "only": "A"}).json()   # tick just the "A"
+    assert [c.get("glyph") for c in only_a["cells"]] == [None, "A"]
+    assert h() == h0
     r = client.post("/api/sheet/read", json={**body, "apply": True}).json()
-    assert [c["glyph"] for c in r["cells"]] == ["H", "a"]
-    assert len(client.get("/api/glyph/H", params={"fid": fid}).json()["contours"]) == 1
-    a = client.get("/api/glyph/a", params={"fid": fid}).json()   # made by the read
+    assert [c["glyph"] for c in r["cells"]] == ["h", "A"]
+    assert h() != h0 and len(h()) == 1   # the written stem replaced the drawing
+    a = client.get("/api/glyph/A", params={"fid": fid}).json()   # made by the read
     ys = [p[1] for c in a["contours"] for p in c]
     assert 480 < max(ys) - min(ys) < 530 and abs(min(ys)) < 15   # 75 px of a 150 px em is 500 units, standing on the baseline
     assert client.post("/api/sheet/read", json={**body, "path": str(tmp_path / "ring.png")}).status_code in (400, 404)
@@ -1594,35 +1609,36 @@ def test_stroke_survives_save_and_reopen_and_unmarked_shapes_are_left_alone(clie
 def test_auto_space_uses_fontforge_auto_width(client, tmp_path):
     fid = _open_sample(client, tmp_path)
     bearings = lambda n: (lambda g: (g["lsb"], g["rsb"]))(client.get(f"/api/glyph/{n}", params={"fid": fid}).json())
-    assert bearings("I") == (68, 68) and bearings("H") == (68, 68)
+    h0 = client.get("/api/glyph/h", params={"fid": fid}).json()
+    assert bearings("h") != (60, 60)
     # forced to exactly 60 on both sides: every glyph with an outline follows, and nothing else is touched
     r = client.post("/api/autospace", json={"fid": fid, "min_bearing": 60, "max_bearing": 60}).json()
     names = {c["name"] for c in r["changed"]}
-    assert {"H", "E", "O"} <= names and "space" not in names
+    assert {"h", "e", "o"} <= names and "space" not in names
     for c in r["changed"]:
         assert (c["lsb"], c["rsb"]) == (60, 60) and c["before"]["width"] > 0
-    assert all(bearings(n) == (60, 60) for n in ("I", "H", "E", "F", "L", "T", "O"))
+    assert all(bearings(n) == (60, 60) for n in "abcdefghijklmnopqrstuvwxyz")
     assert {o["name"] for o in r["outlines"]} == names                                 # the new drawings come back with it
-    h = next(c for c in r["changed"] if c["name"] == "H")
-    assert h["before"] == {"lsb": 68, "rsb": 68, "width": 560}                        # what undo needs
+    h = next(c for c in r["changed"] if c["name"] == "h")
+    assert h["before"] == {"lsb": h0["lsb"], "rsb": h0["rsb"], "width": h0["width"]}  # what undo needs
     # a subset only, and the natural result (no forced bearings) is a sane, even spacing
-    client.post("/api/autospace", json={"fid": fid, "names": ["H", "I"], "min_bearing": 10, "max_bearing": 200})
-    assert bearings("E") == (60, 60)                                                  # not in the list: untouched
-    l, r_ = bearings("H")
+    client.post("/api/autospace", json={"fid": fid, "names": ["h", "l"], "min_bearing": 10, "max_bearing": 200})
+    assert bearings("e") == (60, 60)                                                  # not in the list: untouched
+    l, r_ = bearings("h")
     assert 10 <= l <= 200 and 10 <= r_ <= 200
     # by default nothing ends up with a negative bearing (letters overlapping), however FontForge spaces them
     client.post("/api/autospace", json={"fid": fid, "separation": 100})
-    assert all(min(bearings(n)) >= 0 for n in ("I", "H", "E", "F", "L", "T", "O"))
+    assert all(min(bearings(n)) >= 0 for n in "abcdefghijklmnopqrstuvwxyz")
 
 
 def test_auto_space_leaves_glyphs_with_metrics_keys_to_their_keys(client, tmp_path):
     fid = _open_sample(client, tmp_path)
-    client.post("/api/metrics-key", json={"fid": fid, "name": "F", "side": "lsb", "key": "=E"})
-    before_f = client.get("/api/glyph/F", params={"fid": fid}).json()["lsb"]
+    client.post("/api/metrics-key", json={"fid": fid, "name": "f", "side": "lsb", "key": "=e"})
+    before_f = client.get("/api/glyph/f", params={"fid": fid}).json()["lsb"]
     r = client.post("/api/autospace", json={"fid": fid, "min_bearing": 60, "max_bearing": 60}).json()
-    assert "F" in r["skipped"] and "F" not in {c["name"] for c in r["changed"]}
-    # E moved to 60, and F follows E through its key
-    assert client.get("/api/glyph/F", params={"fid": fid}).json()["lsb"] == 60 != before_f
+    assert "f" in r["skipped"] and "f" not in {c["name"] for c in r["changed"]}
+    # e moved to 60, and f follows e through its key
+    assert client.get("/api/glyph/f", params={"fid": fid}).json()["lsb"] == 60 != before_f
 
 
 def test_reveal_in_folder(client, tmp_path, monkeypatch):
@@ -1654,12 +1670,12 @@ def test_vertical_and_horizontal_guides_live_side_by_side(client, tmp_path):
 
 def test_autosave_all_saves_only_what_changed_and_looking_changes_nothing(client, tmp_path):
     fid = _open_sample(client, tmp_path)
-    other = client.post("/api/open", json={"path": _caps_sample(tmp_path / "t")}).json()["fid"]
+    other = client.post("/api/open", json={"path": _sample_copy(tmp_path / "t")}).json()["fid"]
     quiet = client.post("/api/autosave/all", json={"fids": [fid, other]}).json()
     assert quiet["saved"] is False and {r["changed"] for r in quiet["results"].values()} == {False}
-    client.get("/api/glyph/H", params={"fid": fid})                                  # reading is not changing
+    client.get("/api/glyph/h", params={"fid": fid})                                  # reading is not changing
     assert client.post("/api/autosave/all", json={"fids": [fid, other]}).json()["saved"] is False
-    client.post("/api/edit", json={"fid": other, "name": "H", "kind": "transform", "args": {"matrix": [1, 0, 0, 1, 5, 0], "contours": [0, 1, 2], "points": []}})
+    client.post("/api/edit", json={"fid": other, "name": "h", "kind": "transform", "args": {"matrix": [1, 0, 0, 1, 5, 0], "contours": [0], "points": []}})
     both = client.post("/api/autosave/all", json={"fids": [fid, other]}).json()
     assert both["saved"] is True and [k for k, r in both["results"].items() if r["saved"]] == [str(other)]   # only the edited one was written
     assert client.post("/api/autosave/all", json={"fids": [fid, other]}).json()["saved"] is False            # and it is clean again
