@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from '@/components/ui/context-menu'
 import { useCommands } from './commands'
 import { useSettings } from './settings'
+import { ask } from './confirm'
 import { rangesFor, useLanguages } from './gridScripts'
 import { LanguageBar } from './LanguageBar'
 import { Button } from '@/components/ui/button'
@@ -334,7 +335,7 @@ export function GlyphGrid({ font, sel, loc, family = null, weight = null, axisVa
               <ContextMenuItem onSelect={() => api('/api/glyphs/restore', { names: [ctxName] })
                 .then(() => { onChanged?.(); toast(`Restored ${ctxName} to the last saved version`) }).catch(fail)}>Restore to Last Saved</ContextMenuItem>
               <ContextMenuSeparator />
-              <ContextMenuItem variant="destructive" onSelect={() => { if (window.confirm(`Remove ${ctxName} from the font? Its slot becomes unused again. Edit, Undo Last Font-Wide Change takes it back.`)) api('/api/glyph-delete', { name: ctxName }).then(() => { onChanged?.(); toast(`Removed ${ctxName}`, { description: 'Ctrl Alt Z takes it back.' }) }).catch(fail) }}>Delete Glyph</ContextMenuItem>
+              <ContextMenuItem variant="destructive" onSelect={async () => { if (await ask('Its slot becomes unused again. Ctrl Alt Z takes it back.', { title: `Remove ${ctxName}?`, ok: 'Remove', skip: 'delete-glyph' })) api('/api/glyph-delete', { name: ctxName }).then(() => { onChanged?.(); toast(`Removed ${ctxName}`, { description: 'Ctrl Alt Z takes it back.' }) }).catch(fail) }}>Delete Glyph</ContextMenuItem>
               {masterOps && masterOps.others.length > 0 && <>
                 <ContextMenuSeparator />
                 <ContextMenuSub>

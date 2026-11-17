@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Kbd } from '@/components/ui/kbd'
 import { getSettings } from './settings'
+import { ask } from './confirm'
 import { featureTags, ON_BY_DEFAULT } from './features'
 import { CHUNK, dirOf, isComplex, isRtl, literalChunks, type Dir } from './shapedText'
 import { SCRIPTS } from './scripts'
@@ -900,10 +901,10 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
         {blending && <span className="font-mono text-foreground">weight {weight}</span>}
         {blendMiss.length > 0 && family && openMaster && (
           <Button size="xs" variant="outline" title={`Copy ${blendMiss.length > 6 ? 'these glyphs' : blendMiss.join(' ')} from the open master (${openMaster.name}) into every other master, so their points match again. The other masters' drawings of them are replaced: reshape afterwards, bolder and lighter keep the points. Take a snapshot first if unsure.`}
-            onClick={() => {
-              if (!window.confirm(`Replace ${blendMiss.length} glyph${blendMiss.length > 1 ? 's' : ''} (${blendMiss.slice(0, 8).join(' ')}) in the other masters with copies of ${openMaster.name}'s, so all masters have the same points?
+            onClick={async () => {
+              if (!await ask(`Replace ${blendMiss.length} glyph${blendMiss.length > 1 ? 's' : ''} (${blendMiss.slice(0, 8).join(' ')}) in the other masters with copies of ${openMaster.name}'s, so all masters have the same points?
 
-Their current drawings in the other masters are lost; reshape them afterwards (Bolder/Lighter keep the points).`)) return
+Their current drawings in the other masters are lost; reshape them afterwards (Bolder/Lighter keep the points).`, { title: 'Make the masters match?', ok: 'Replace', skip: 'match-masters' })) return
               void api('/api/family/copy-glyph', { source: openMaster.path, targets: family.masters.filter(m => !samePath(m.path, openMaster.path)).map(m => m.path), names: blendMiss })
                 .then(() => { blendCache.current.clear(); lastBlend.current.clear(); setBlendTick(x => x + 1); pump.current(); toast.success('Masters match again', { description: 'The glyphs in the other masters are copies of this one: reshape them (Bolder / Lighter keep the points).' }) })
                 .catch(e => toast.error('Could not match the masters', { description: (e as Error).message }))

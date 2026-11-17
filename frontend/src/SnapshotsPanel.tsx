@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { api, type FontInfo } from './api'
+import { ask } from './confirm'
 import { ago } from './recent'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,7 +49,7 @@ export function SnapshotsPanel({ font, onSelect, onRestore }: { font: FontInfo; 
     try { setDiff({ id, d: await api<Diff>(`/api/snapshots/compare?path=${encodeURIComponent(font.path)}&id=${id}`) }) } catch (e) { toast.error('Could not compare', { description: (e as Error).message }) }
   }
   const remove = async (s: Snap) => {
-    if (!window.confirm(`Delete the snapshot “${s.label || s.id}”? This cannot be undone.`)) return
+    if (!await ask('This cannot be undone.', { title: `Delete the snapshot “${s.label || s.id}”?`, ok: 'Delete' })) return
     try { await api('/api/snapshots/delete', { path: font.path, id: s.id }); load() } catch (e) { toast.error('Could not delete', { description: (e as Error).message }) }
   }
 

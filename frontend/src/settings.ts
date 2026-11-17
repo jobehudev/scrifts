@@ -17,10 +17,11 @@ export type Settings = {
   reopenLast: boolean      // open the most recent font on start
   autosave: boolean        // save .sfd projects in place a few seconds after a change
   scripts: string[]        // OpenType script tags whose slots a new font starts with in the glyph grid
+  skipAsk: string[]        // prompts answered with "Don't ask again" (keys from confirm.tsx); empty = ask every time
 }
 
 export const DEFAULTS: Settings = {
-  theme: 'dark', custom: { bg: '#1b2030', accent: '#7aa2f7' }, uiScale: 100, uiFont: 'default', nudge: 1, nudgeBig: 10, gridCell: 64, gridStyle: 'dots', snapToGrid: false, reopenLast: false, autosave: true, scripts: ['latn'],
+  theme: 'dark', custom: { bg: '#1b2030', accent: '#7aa2f7' }, uiScale: 100, uiFont: 'default', nudge: 1, nudgeBig: 10, gridCell: 64, gridStyle: 'dots', snapToGrid: false, reopenLast: false, autosave: true, scripts: ['latn'], skipAsk: [],
 }
 
 const KEY = 'scrifts.settings'

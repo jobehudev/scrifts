@@ -106,6 +106,8 @@ export function SettingsDialog({ open, onOpenChange, fontName, onRefreshUiFont }
       body: <Choice k="autosave" options={[[true, 'On'], [false, 'Off']]} /> },
     { id: 'start', cat: 'general', label: 'On Start', desc: 'What you see when Scrifts opens.', keywords: 'startup reopen last font home',
       body: <Choice k="reopenLast" options={[[false, 'Show start screen'], [true, 'Reopen last font']]} /> },
+    { id: 'ask', cat: 'general', label: 'Warnings', desc: s.skipAsk.length ? `${s.skipAsk.length} question${s.skipAsk.length === 1 ? ' is' : 's are'} no longer asked ("Don't ask again"). Questions about losing unsaved work are always asked.` : 'Every question is asked. Tick "Don\'t ask again" in one to skip it from then on. Questions about losing unsaved work are always asked.', keywords: 'confirm prompt dialog dont ask again warning delete',
+      body: <Button size="xs" variant="outline" disabled={!s.skipAsk.length} onClick={() => setSettings({ skipAsk: [] })}>Ask everything again</Button> },
   ]
 
   const query = q.trim().toLowerCase()

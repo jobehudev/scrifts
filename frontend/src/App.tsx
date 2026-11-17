@@ -13,6 +13,7 @@ import { latestOnly } from './latestOnly'
 import type { NewFont } from './NewFontDialog'
 import { AxisDialog, type Brace, CheckDialog, EditMasterDialog, FamilyDialog, MasterBar, RemoveMasterDialog, SoloMasterBar, samePath, type BlendGlyph, type Check, type Family, type Master, type MasterOps } from './FamilyBar'
 import { useSettings, zoomUi } from './settings'
+import { ask, AskHost } from './confirm'
 import { addRecent, ago, clearRecent, ext, loadRecent, removeRecent } from './recent'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
@@ -585,7 +586,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       if (!session.fid) return
       // never hold the window open for long: a save stuck behind a long job gives up after ten seconds
       const left = await Promise.race([flushSaves(), new Promise<boolean>(r => setTimeout(() => r(false), 10000))])
-      if (left && !window.confirm('This font has changes that can only be kept with Save As. Close without saving?')) e.preventDefault()
+      if (left && !await ask('This font has changes that can only be kept with Save As.', { title: 'Close without saving?', ok: 'Close' })) e.preventDefault()
     })
     return () => { void un.then(f => f()).catch(() => {}) }
   }, [flushSaves])
@@ -594,14 +595,14 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
   const goHome = useCallback(async () => {
     if (!font) return
     const left = await flushSaves()
-    if (left && !window.confirm(font.path.toLowerCase().endsWith('.svg') ? 'This drawing has changes you have not saved (Ctrl S). Leave without saving?' : 'This font has changes that can only be saved with Save As (it is not an .sfd project). Leave without saving?')) return
+    if (left && !await ask(font.path.toLowerCase().endsWith('.svg') ? 'This drawing has changes you have not saved (Ctrl S).' : 'This font has changes that can only be saved with Save As (it is not an .sfd project).', { title: 'Leave without saving?', ok: 'Leave' })) return
     closeFont()
   }, [font, flushSaves, closeFont])
 
   /** Go back to a snapshot: close the project's fonts (so nothing writes over the restored files), restore, reopen. */
   const restoreSnapshot = useCallback(async (id: string, label: string) => {
     if (!font) return
-    if (!window.confirm(`Go back to “${label}”?\n\nYour work as it is now is saved as a snapshot first, so you can come back to it.`)) return
+    if (!await ask('Your work as it is now is saved as a snapshot first, so you can come back to it.', { title: `Go back to “${label}”?`, ok: 'Go back', skip: 'restore-snapshot' })) return
     const path = font.path
     try {
       for (const fid of [session.fid, reference?.fid, ...ghostsRef.current.map(g => g.fid)]) if (fid) await api('/api/close', { fid }).catch(() => {})
@@ -956,6 +957,7 @@ Not imported: ${r.skipped.join(', ')}.` : ''}`,
       {everSettings && <Suspense fallback={null}><SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} fontName={font?.familyname ?? null}
         onRefreshUiFont={() => setUiFontRev(r => r + 1)} /></Suspense>}
       <Toaster position="bottom-right" />
+      <AskHost />
     </TooltipProvider>
   )
 }

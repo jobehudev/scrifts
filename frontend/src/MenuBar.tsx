@@ -4,6 +4,7 @@ import { command, type Command } from './commands'
 import { ago, ext, type Recent } from './recent'
 import { TOOLS, VIEWS } from './panels'
 import { zoomUi } from './settings'
+import { ask } from './confirm'
 import { PRESETS, readSaved, writeSaved } from './workspaces'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Kbd } from '@/components/ui/kbd'
@@ -318,7 +319,7 @@ export function MenuBar({ hasFont, editing, view, onView, recent, onFontInfo, on
               <MenubarSubContent>
                 {[...Object.keys(PRESETS), ...Object.keys(readSaved())].map((n, i) => <MenubarItem key={n} onSelect={() => onWorkspace({ open: n })}>{n}{i < 10 && <MenubarShortcut>Ctrl Alt {(i + 1) % 10}</MenubarShortcut>}</MenubarItem>)}
                 <MenubarSeparator />
-                <MenubarItem onSelect={() => { const n = window.prompt('Name this layout')?.trim(); if (n && (!(n in readSaved()) || window.confirm(`Replace the saved layout “${n}”?`))) onWorkspace({ save: n }) }}>Save Layout As…</MenubarItem>
+                <MenubarItem onSelect={async () => { const n = window.prompt('Name this layout')?.trim(); if (n && (!(n in readSaved()) || await ask(`The saved layout “${n}” is replaced by this one.`, { title: 'Replace layout?', ok: 'Replace', skip: 'replace-layout' }))) onWorkspace({ save: n }) }}>Save Layout As…</MenubarItem>
                 {Object.keys(readSaved()).map(n => <MenubarItem key={n} onSelect={() => { const { [n]: _, ...rest } = readSaved(); writeSaved(rest) }}>Delete “{n}”</MenubarItem>)}
               </MenubarSubContent>
             </MenubarSub>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { api, type FontInfo } from './api'
+import { ask } from './confirm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -76,7 +77,7 @@ export function GlyphInfoPanel({ font, sel, onSelect, onChanged }: { font: FontI
     } catch (e) { toast.error('Could not rename', { description: (e as Error).message }) }
   }
   const remove = async () => {
-    if (!sel || !window.confirm(`Remove ${sel} from the font? Its slot becomes unused again. Edit, Undo Last Font-Wide Change takes it back.`)) return
+    if (!sel || !await ask('Its slot becomes unused again. Ctrl Alt Z takes it back.', { title: `Remove ${sel}?`, ok: 'Remove', skip: 'delete-glyph' })) return
     try {
       await api('/api/glyph-delete', { name: sel })
       onChanged()
