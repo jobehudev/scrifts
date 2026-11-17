@@ -1,0 +1,217 @@
+SplineFontDB: 3.2
+FontName: ScriftsSample-Regular
+FullName: Scrifts Sample Regular
+FamilyName: Scrifts Sample
+Weight: Regular
+Copyright: Copyright (c) 2026, Joep
+UComments: "2026-11-17: Created with FontForge (http://fontforge.org)"
+Version: 001.000
+ItalicAngle: 0
+UnderlinePosition: -100
+UnderlineWidth: 50
+Ascent: 800
+Descent: 200
+InvalidEm: 0
+LayerCount: 2
+Layer: 0 0 "Back" 1
+Layer: 1 0 "Fore" 0
+XUID: [1021 310 725429834 13445]
+OS2Version: 0
+OS2_WeightWidthSlopeOnly: 0
+OS2_UseTypoMetrics: 1
+CreationTime: 1794880633
+ModificationTime: 1794880633
+OS2TypoAscent: 0
+OS2TypoAOffset: 1
+OS2TypoDescent: 0
+OS2TypoDOffset: 1
+OS2TypoLinegap: 0
+OS2WinAscent: 0
+OS2WinAOffset: 1
+OS2WinDescent: 0
+OS2WinDOffset: 1
+HheadAscent: 0
+HheadAOffset: 1
+HheadDescent: 0
+HheadDOffset: 1
+OS2Vendor: 'PfEd'
+DEI: 91125
+Encoding: UnicodeBmp
+UnicodeInterp: none
+NameList: AGL For New Fonts
+DisplaySize: -48
+AntiAlias: 1
+FitToEm: 0
+BeginChars: 65537 9
+
+StartChar: space
+Encoding: 32 32 0
+Width: 250
+Flags: HW
+LayerCount: 2
+EndChar
+
+StartChar: I
+Encoding: 73 73 1
+Width: 220
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+68 0 m 0
+ 68 700 l 0
+ 152 700 l 0
+ 152 0 l 0
+ 68 0 l 0
+EndSplineSet
+EndChar
+
+StartChar: H
+Encoding: 72 72 2
+Width: 560
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+68 308 m 0
+ 488 308 l 0
+ 488 392 l 0
+ 68 392 l 0
+ 68 308 l 0
+408 0 m 0
+ 408 700 l 0
+ 492 700 l 0
+ 492 0 l 0
+ 408 0 l 0
+68 0 m 0
+ 68 700 l 0
+ 152 700 l 0
+ 152 0 l 0
+ 68 0 l 0
+EndSplineSet
+EndChar
+
+StartChar: E
+Encoding: 69 69 3
+Width: 480
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+68 616 m 0
+ 68 700 l 0
+ 428 700 l 0
+ 428 616 l 0
+ 68 616 l 0
+68 308 m 0
+ 68 392 l 0
+ 368 392 l 0
+ 368 308 l 0
+ 68 308 l 0
+68 0 m 0
+ 68 84 l 0
+ 428 84 l 0
+ 428 0 l 0
+ 68 0 l 0
+68 0 m 0
+ 152 0 l 0
+ 152 700 l 0
+ 68 700 l 0
+ 68 0 l 0
+EndSplineSet
+EndChar
+
+StartChar: F
+Encoding: 70 70 4
+Width: 450
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+68 616 m 0
+ 408 616 l 0
+ 408 700 l 0
+ 68 700 l 0
+ 68 616 l 0
+68 308 m 0
+ 358 308 l 0
+ 358 392 l 0
+ 68 392 l 0
+ 68 308 l 0
+68 0 m 0
+ 68 700 l 0
+ 152 700 l 0
+ 152 0 l 0
+ 68 0 l 0
+EndSplineSet
+EndChar
+
+StartChar: L
+Encoding: 76 76 5
+Width: 430
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+68 0 m 0
+ 68 84 l 0
+ 398 84 l 0
+ 398 0 l 0
+ 68 0 l 0
+68 0 m 0
+ 152 0 l 0
+ 152 700 l 0
+ 68 700 l 0
+ 68 0 l 0
+EndSplineSet
+EndChar
+
+StartChar: T
+Encoding: 84 84 6
+Width: 500
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+208 0 m 0
+ 208 700 l 0
+ 292 700 l 0
+ 292 0 l 0
+ 208 0 l 0
+40 616 m 0
+ 40 700 l 0
+ 460 700 l 0
+ 460 616 l 0
+ 40 616 l 0
+EndSplineSet
+EndChar
+
+StartChar: O
+Encoding: 79 79 7
+Width: 640
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+320 616 m 0
+ 217.275036537 616 134 496.907743447 134 350 c 0
+ 134 203.092256553 217.275036537 84 320 84 c 0
+ 422.724963463 84 506 203.092256553 506 350 c 0
+ 506 496.907743447 422.724963463 616 320 616 c 0
+320 700 m 0
+ 469.116882446 700 590 543.29966243 590 350 c 0
+ 590 156.70033757 469.116882446 0 320 0 c 0
+ 170.883117554 0 50 156.70033757 50 350 c 0
+ 50 543.29966243 170.883117554 700 320 700 c 0
+EndSplineSet
+EndChar
+
+StartChar: .notdef
+Encoding: 65536 -1 8
+Width: 500
+VWidth: 0
+Flags: HW
+LayerCount: 2
+EndChar
+EndChars
+EndSplineFont

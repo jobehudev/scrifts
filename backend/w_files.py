@@ -3,6 +3,7 @@
 Part of the FontForge worker (worker.py): runs under FontForge's own Python, stdlib and fontforge only."""
 
 import os
+import shutil
 import tempfile
 
 import fontforge
@@ -329,49 +330,12 @@ def op_link_style(style, weight):
 
 
 def op_make_sample(path):
-    """A small, plain font to try Scrifts on: HELOITF drawn from bars and a ring, spaced and named properly.
+    """A small, plain font to try Scrifts on (a to z, HELOFIT): the .sfd that ships next to this file, copied.
     Never overwrites: if the file is there (and perhaps edited), it is left alone."""
     if os.path.exists(path):
         return {"path": path, "created": False}
-    f = fontforge.font()
-    f.encoding = "UnicodeBmp"
-    f.em = 1000
-    f.familyname, f.fontname, f.fullname, f.weight = "Scrifts Sample", "ScriftsSample-Regular", "Scrifts Sample Regular", "Regular"
-    cap, stem = 700, 84
-    K = 0.5522847498
-
-    def bar(g, x, y, w, h):
-        p = g.glyphPen(replace=False)  # add to the glyph; the default would clear what is there
-        p.moveTo((x, y)); p.lineTo((x, y + h)); p.lineTo((x + w, y + h)); p.lineTo((x + w, y)); p.closePath()
-
-    def oval(g, cx, cy, rx, ry):
-        p = g.glyphPen(replace=False)  # add to the glyph; the default would clear what is there
-        p.moveTo((cx, cy + ry))
-        p.curveTo((cx + K * rx, cy + ry), (cx + rx, cy + K * ry), (cx + rx, cy))
-        p.curveTo((cx + rx, cy - K * ry), (cx + K * rx, cy - ry), (cx, cy - ry))
-        p.curveTo((cx - K * rx, cy - ry), (cx - rx, cy - K * ry), (cx - rx, cy))
-        p.curveTo((cx - rx, cy + K * ry), (cx - K * rx, cy + ry), (cx, cy + ry))
-        p.closePath()
-
-    shapes = {
-        "I": (220, lambda g: bar(g, 68, 0, stem, cap)),
-        "H": (560, lambda g: (bar(g, 68, 0, stem, cap), bar(g, 408, 0, stem, cap), bar(g, 68, cap / 2 - stem / 2, 420, stem))),
-        "E": (480, lambda g: (bar(g, 68, 0, stem, cap), bar(g, 68, 0, 360, stem), bar(g, 68, cap / 2 - stem / 2, 300, stem), bar(g, 68, cap - stem, 360, stem))),
-        "F": (450, lambda g: (bar(g, 68, 0, stem, cap), bar(g, 68, cap / 2 - stem / 2, 290, stem), bar(g, 68, cap - stem, 340, stem))),
-        "L": (430, lambda g: (bar(g, 68, 0, stem, cap), bar(g, 68, 0, 330, stem))),
-        "T": (500, lambda g: (bar(g, 40, cap - stem, 420, stem), bar(g, 250 - stem / 2, 0, stem, cap))),
-        "O": (640, lambda g: (oval(g, 320, cap / 2, 270, cap / 2), oval(g, 320, cap / 2, 270 - stem, cap / 2 - stem))),
-    }
-    f.createChar(32, "space").width = 250
-    for ch, (width, draw) in shapes.items():
-        g = f.createChar(ord(ch))
-        draw(g)
-        g.width = width
-        g.correctDirection()  # the ring's inner oval becomes a hole
-    f.createChar(-1, ".notdef").width = 500
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    f.save(path)
-    f.close()
+    shutil.copyfile(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scrifts Sample.sfd"), path)
     return {"path": path, "created": True}
 
 

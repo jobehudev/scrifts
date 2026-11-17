@@ -1,0 +1,716 @@
+SplineFontDB: 3.2
+FontName: ScriftsSample-Regular
+FullName: Scrifts Sample Regular
+FamilyName: Scrifts Sample
+Weight: Regular
+Copyright: Copyright (c) 2026, Joep
+UComments: "2026-11-17: Created with FontForge (http://fontforge.org)"
+Version: 001.000
+ItalicAngle: 0
+UnderlinePosition: -100
+UnderlineWidth: 50
+Ascent: 800
+Descent: 200
+InvalidEm: 0
+LayerCount: 2
+Layer: 0 0 "Back" 1
+Layer: 1 0 "Fore" 0
+XUID: [1021 496 1213825414 23867]
+OS2Version: 0
+OS2_WeightWidthSlopeOnly: 0
+OS2_UseTypoMetrics: 1
+CreationTime: 1794879416
+ModificationTime: 1794880090
+OS2TypoAscent: 0
+OS2TypoAOffset: 1
+OS2TypoDescent: 0
+OS2TypoDOffset: 1
+OS2TypoLinegap: 0
+OS2WinAscent: 0
+OS2WinAOffset: 1
+OS2WinDescent: 0
+OS2WinDOffset: 1
+HheadAscent: 0
+HheadAOffset: 1
+HheadDescent: 0
+HheadDOffset: 1
+OS2Vendor: 'PfEd'
+Lookup: 258 0 0 "Scrifts kerning" { "Scrifts kerning pairs"  } ['kern' ('DFLT' <'dflt' > 'latn' <'dflt' > ) ]
+DEI: 91125
+Encoding: UnicodeBmp
+UnicodeInterp: none
+NameList: AGL For New Fonts
+DisplaySize: -48
+AntiAlias: 1
+FitToEm: 0
+BeginChars: 65537 28
+
+StartChar: space
+Encoding: 32 32 0
+Width: 250
+Flags: HW
+LayerCount: 2
+EndChar
+
+StartChar: a
+Encoding: 97 97 1
+Width: 451
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+227 424 m 0
+ 159 424 103 346 103 250 c 0
+ 103 154 159 76 227 76 c 0
+ 295 76 351 154 351 250 c 0
+ 351 346 295 424 227 424 c 0
+351 54 m 1
+ 317 20 274 0 227 0 c 0
+ 117 0 27 112 27 250 c 0
+ 27 388 117 500 227 500 c 0
+ 274 500 317 480 351 446 c 1
+ 351 500 l 1
+ 427 500 l 1
+ 427 250 l 1
+ 427 0 l 1
+ 351 0 l 1
+ 351 54 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 20 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 10 -160 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 11 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: b
+Encoding: 98 98 2
+Width: 430
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+226 500 m 0
+ 336 500 426 388 426 250 c 0
+ 426 112 336 0 226 0 c 0
+ 179 0 136 20 102 54 c 1
+ 102 0 l 1
+ 26 0 l 1
+ 26 250 l 1
+ 26 720 l 1
+ 102 720 l 1
+ 102 446 l 1
+ 136 480 179 500 226 500 c 0
+102 250 m 0
+ 102 154 158 76 226 76 c 0
+ 294 76 350 154 350 250 c 0
+ 350 346 294 424 226 424 c 0
+ 158 424 102 346 102 250 c 0
+EndSplineSet
+Kerns2: 26 -63 "Scrifts kerning pairs" 25 -55 "Scrifts kerning pairs" 24 -53 "Scrifts kerning pairs" 23 -37 "Scrifts kerning pairs" 22 -63 "Scrifts kerning pairs" 21 19 "Scrifts kerning pairs" 20 -41 "Scrifts kerning pairs" 19 18 "Scrifts kerning pairs" 18 19 "Scrifts kerning pairs" 17 16 "Scrifts kerning pairs" 16 19 "Scrifts kerning pairs" 15 16 "Scrifts kerning pairs" 14 19 "Scrifts kerning pairs" 13 19 "Scrifts kerning pairs" 12 18 "Scrifts kerning pairs" 11 18 "Scrifts kerning pairs" 10 -200 "Scrifts kerning pairs" 9 19 "Scrifts kerning pairs" 8 18 "Scrifts kerning pairs" 7 16 "Scrifts kerning pairs" 6 -44 "Scrifts kerning pairs" 5 17 "Scrifts kerning pairs" 4 5 "Scrifts kerning pairs" 3 16 "Scrifts kerning pairs" 2 18 "Scrifts kerning pairs" 1 16 "Scrifts kerning pairs"
+EndChar
+
+StartChar: c
+Encoding: 99 99 3
+Width: 411
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+366 411 m 1
+ 308 362 l 1
+ 274 418 220 439 171 414 c 0
+ 122 389 89 323 89 250 c 0
+ 89 177 122 111 171 86 c 0
+ 220 61 274 82 308 138 c 1
+ 366 89 l 1
+ 312 8 224 -21 145 15 c 0
+ 66 51 13 145 13 250 c 0
+ 13 355 66 449 145 485 c 0
+ 224 521 312 492 366 411 c 1
+EndSplineSet
+Kerns2: 10 -231 "Scrifts kerning pairs" 26 -28 "Scrifts kerning pairs" 25 -65 "Scrifts kerning pairs" 24 -75 "Scrifts kerning pairs" 23 -53 "Scrifts kerning pairs" 22 -69 "Scrifts kerning pairs" 21 -19 "Scrifts kerning pairs" 20 -50 "Scrifts kerning pairs" 19 -15 "Scrifts kerning pairs" 18 -10 "Scrifts kerning pairs" 17 -78 "Scrifts kerning pairs" 16 -10 "Scrifts kerning pairs" 15 -78 "Scrifts kerning pairs" 14 -10 "Scrifts kerning pairs" 13 -10 "Scrifts kerning pairs" 12 -10 "Scrifts kerning pairs" 11 -10 "Scrifts kerning pairs" 9 -10 "Scrifts kerning pairs" 8 -10 "Scrifts kerning pairs" 7 -78 "Scrifts kerning pairs" 6 -50 "Scrifts kerning pairs" 5 -77 "Scrifts kerning pairs" 4 -89 "Scrifts kerning pairs" 3 -78 "Scrifts kerning pairs" 2 -10 "Scrifts kerning pairs" 1 -78 "Scrifts kerning pairs"
+EndChar
+
+StartChar: d
+Encoding: 100 100 4
+Width: 462
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+238 424 m 0
+ 170 424 114 346 114 250 c 0
+ 114 154 170 76 238 76 c 0
+ 306 76 362 154 362 250 c 0
+ 362 346 306 424 238 424 c 0
+362 54 m 1
+ 328 20 285 0 238 0 c 0
+ 128 0 38 112 38 250 c 0
+ 38 388 128 500 238 500 c 0
+ 285 500 328 480 362 446 c 1
+ 362 720 l 1
+ 438 720 l 1
+ 438 250 l 1
+ 438 0 l 1
+ 362 0 l 1
+ 362 54 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 9 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 20 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 10 -160 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 7 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 8 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: e
+Encoding: 101 101 5
+Width: 452
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+425 288 m 1
+ 427 288 l 1
+ 427 250 l 1
+ 427 212 l 1
+ 106 212 l 1
+ 114 162 137 118 172 94 c 0
+ 227 56 294 80 329 150 c 1
+ 391 107 l 1
+ 334 6 228 -29 139 26 c 0
+ 79 63 39 134 29 212 c 1
+ 27 212 l 1
+ 27 246 l 2
+ 27 249 27 251 27 254 c 2
+ 27 288 l 1
+ 29 288 l 1
+ 31 300 33 313 36 325 c 0
+ 66 443 159 516 257 497 c 0
+ 344 480 412 394 425 288 c 1
+106 288 m 1
+ 348 288 l 1
+ 337 357 297 411 246 422 c 0
+ 186 435 127 384 109 302 c 0
+ 108 297 107 293 106 288 c 1
+EndSplineSet
+Kerns2: 26 -72 "Scrifts kerning pairs" 1 18 "Scrifts kerning pairs" 2 19 "Scrifts kerning pairs" 3 17 "Scrifts kerning pairs" 4 7 "Scrifts kerning pairs" 5 18 "Scrifts kerning pairs" 6 -59 "Scrifts kerning pairs" 7 18 "Scrifts kerning pairs" 8 19 "Scrifts kerning pairs" 9 19 "Scrifts kerning pairs" 10 -205 "Scrifts kerning pairs" 11 19 "Scrifts kerning pairs" 12 19 "Scrifts kerning pairs" 13 19 "Scrifts kerning pairs" 14 19 "Scrifts kerning pairs" 15 18 "Scrifts kerning pairs" 16 19 "Scrifts kerning pairs" 17 18 "Scrifts kerning pairs" 18 19 "Scrifts kerning pairs" 19 20 "Scrifts kerning pairs" 20 -59 "Scrifts kerning pairs" 21 19 "Scrifts kerning pairs" 22 -64 "Scrifts kerning pairs" 23 -38 "Scrifts kerning pairs" 24 -54 "Scrifts kerning pairs" 25 -56 "Scrifts kerning pairs"
+EndChar
+
+StartChar: f
+Encoding: 102 102 6
+Width: 301
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+30 424 m 1
+ 30 500 l 1
+ 90 500 l 1
+ 90 644 l 1
+ 90 720 l 1
+ 166 720 l 1
+ 270 720 l 1
+ 270 644 l 1
+ 166 644 l 1
+ 166 500 l 1
+ 250 500 l 1
+ 250 424 l 1
+ 166 424 l 1
+ 166 0 l 1
+ 90 0 l 1
+ 90 424 l 1
+ 30 424 l 1
+EndSplineSet
+Kerns2: 10 -217 "Scrifts kerning pairs" 1 -97 "Scrifts kerning pairs" 2 6 "Scrifts kerning pairs" 3 -86 "Scrifts kerning pairs" 4 -109 "Scrifts kerning pairs" 5 -96 "Scrifts kerning pairs" 6 -36 "Scrifts kerning pairs" 7 -97 "Scrifts kerning pairs" 8 6 "Scrifts kerning pairs" 11 6 "Scrifts kerning pairs" 12 6 "Scrifts kerning pairs" 13 -27 "Scrifts kerning pairs" 14 -27 "Scrifts kerning pairs" 15 -97 "Scrifts kerning pairs" 16 -27 "Scrifts kerning pairs" 17 -97 "Scrifts kerning pairs" 18 -26 "Scrifts kerning pairs" 19 -24 "Scrifts kerning pairs" 20 -34 "Scrifts kerning pairs" 21 -26 "Scrifts kerning pairs" 22 -48 "Scrifts kerning pairs" 23 -43 "Scrifts kerning pairs" 25 -47 "Scrifts kerning pairs" 26 -58 "Scrifts kerning pairs" 24 -53 "Scrifts kerning pairs"
+EndChar
+
+StartChar: g
+Encoding: 103 103 7
+Width: 451
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+27 -60 m 1
+ 103 -60 l 1
+ 103 -101 159 -134 227 -134 c 0
+ 295 -134 351 -101 351 -60 c 2
+ 351 54 l 1
+ 317 20 274 0 227 0 c 0
+ 117 0 27 112 27 250 c 0
+ 27 388 117 500 227 500 c 0
+ 274 500 317 480 351 446 c 1
+ 351 500 l 1
+ 427 500 l 1
+ 427 250 l 1
+ 427 -60 l 2
+ 427 -143 337 -210 227 -210 c 0
+ 117 -210 27 -143 27 -60 c 1
+227 424 m 0
+ 159 424 103 346 103 250 c 0
+ 103 154 159 76 227 76 c 0
+ 295 76 351 154 351 250 c 0
+ 351 346 295 424 227 424 c 0
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 25 -7 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 19 "Scrifts kerning pairs" 16 29 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 11 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: h
+Encoding: 104 104 8
+Width: 411
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+310 320 m 2
+ 310 377 263 424 206 424 c 0
+ 149 424 102 377 102 320 c 2
+ 102 0 l 1
+ 26 0 l 1
+ 26 320 l 1
+ 26 720 l 1
+ 102 720 l 1
+ 102 467 l 1
+ 131 488 167 500 206 500 c 0
+ 305 500 386 419 386 320 c 2
+ 386 0 l 1
+ 310 0 l 1
+ 310 320 l 2
+EndSplineSet
+Kerns2: 26 17 "Scrifts kerning pairs" 25 -41 "Scrifts kerning pairs" 24 -10 "Scrifts kerning pairs" 23 -25 "Scrifts kerning pairs" 22 -48 "Scrifts kerning pairs" 21 25 "Scrifts kerning pairs" 20 -30 "Scrifts kerning pairs" 19 26 "Scrifts kerning pairs" 18 27 "Scrifts kerning pairs" 17 19 "Scrifts kerning pairs" 16 27 "Scrifts kerning pairs" 15 19 "Scrifts kerning pairs" 14 27 "Scrifts kerning pairs" 13 27 "Scrifts kerning pairs" 12 27 "Scrifts kerning pairs" 11 27 "Scrifts kerning pairs" 10 -178 "Scrifts kerning pairs" 9 27 "Scrifts kerning pairs" 8 27 "Scrifts kerning pairs" 7 19 "Scrifts kerning pairs" 6 -32 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 8 "Scrifts kerning pairs" 3 19 "Scrifts kerning pairs" 2 27 "Scrifts kerning pairs" 1 19 "Scrifts kerning pairs"
+EndChar
+
+StartChar: i
+Encoding: 105 105 9
+Width: 126
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+26 610 m 1
+ 26 686 l 1
+ 102 686 l 1
+ 102 610 l 1
+ 26 610 l 1
+26 0 m 1
+ 26 500 l 1
+ 102 500 l 1
+ 102 0 l 1
+ 26 0 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 20 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 10 -160 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 10 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: j
+Encoding: 106 106 10
+Width: 316
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+32 -60 m 1
+ 108 -60 l 1
+ 108 -101 132 -134 162 -134 c 0
+ 192 -134 216 -101 216 -60 c 2
+ 216 500 l 1
+ 292 500 l 1
+ 292 -60 l 2
+ 292 -143 234 -210 162 -210 c 0
+ 90 -210 32 -143 32 -60 c 1
+216 610 m 1
+ 216 686 l 1
+ 292 686 l 1
+ 292 610 l 1
+ 216 610 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 25 -7 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 19 "Scrifts kerning pairs" 16 29 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 10 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: k
+Encoding: 107 107 11
+Width: 377
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+26 0 m 1
+ 26 720 l 1
+ 102 720 l 1
+ 102 317 l 1
+ 255 500 l 1
+ 346 500 l 1
+ 175 267 l 1
+ 346 0 l 1
+ 255 0 l 1
+ 102 218 l 1
+ 102 0 l 1
+ 26 0 l 1
+EndSplineSet
+Kerns2: 10 -217 "Scrifts kerning pairs" 1 -98 "Scrifts kerning pairs" 2 -7 "Scrifts kerning pairs" 3 -76 "Scrifts kerning pairs" 4 -77 "Scrifts kerning pairs" 5 -98 "Scrifts kerning pairs" 6 -23 "Scrifts kerning pairs" 7 -98 "Scrifts kerning pairs" 8 -7 "Scrifts kerning pairs" 9 -5 "Scrifts kerning pairs" 11 -7 "Scrifts kerning pairs" 12 -7 "Scrifts kerning pairs" 13 -5 "Scrifts kerning pairs" 14 -5 "Scrifts kerning pairs" 15 -98 "Scrifts kerning pairs" 16 -5 "Scrifts kerning pairs" 17 -98 "Scrifts kerning pairs" 20 -20 "Scrifts kerning pairs" 21 -20 "Scrifts kerning pairs" 22 -31 "Scrifts kerning pairs" 23 -29 "Scrifts kerning pairs" 24 -16 "Scrifts kerning pairs" 25 -30 "Scrifts kerning pairs" 26 -11 "Scrifts kerning pairs"
+EndChar
+
+StartChar: l
+Encoding: 108 108 12
+Width: 126
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+26 0 m 1
+ 26 720 l 1
+ 102 720 l 1
+ 102 0 l 1
+ 26 0 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 9 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 20 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 10 -160 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 7 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 8 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: m
+Encoding: 109 109 13
+Width: 535
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+434 360 m 2
+ 434 395 405 424 370 424 c 0
+ 335 424 306 395 306 360 c 2
+ 306 0 l 1
+ 230 0 l 1
+ 230 360 l 2
+ 230 395 201 424 166 424 c 0
+ 131 424 102 395 102 360 c 2
+ 102 0 l 1
+ 26 0 l 1
+ 26 360 l 1
+ 26 500 l 1
+ 102 500 l 1
+ 102 485 l 1
+ 121 495 143 500 166 500 c 0
+ 206 500 242 483 268 456 c 1
+ 294 483 330 500 370 500 c 0
+ 447 500 510 437 510 360 c 2
+ 510 0 l 1
+ 434 0 l 1
+ 434 360 l 2
+EndSplineSet
+Kerns2: 26 17 "Scrifts kerning pairs" 25 -32 "Scrifts kerning pairs" 24 -10 "Scrifts kerning pairs" 23 -19 "Scrifts kerning pairs" 22 -38 "Scrifts kerning pairs" 21 25 "Scrifts kerning pairs" 20 -26 "Scrifts kerning pairs" 19 27 "Scrifts kerning pairs" 18 28 "Scrifts kerning pairs" 17 19 "Scrifts kerning pairs" 16 28 "Scrifts kerning pairs" 15 19 "Scrifts kerning pairs" 14 28 "Scrifts kerning pairs" 13 28 "Scrifts kerning pairs" 12 28 "Scrifts kerning pairs" 11 28 "Scrifts kerning pairs" 10 -166 "Scrifts kerning pairs" 9 28 "Scrifts kerning pairs" 8 28 "Scrifts kerning pairs" 7 19 "Scrifts kerning pairs" 6 -26 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 8 "Scrifts kerning pairs" 3 19 "Scrifts kerning pairs" 2 28 "Scrifts kerning pairs" 1 19 "Scrifts kerning pairs"
+EndChar
+
+StartChar: n
+Encoding: 110 110 14
+Width: 411
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+310 320 m 2
+ 310 377 263 424 206 424 c 0
+ 149 424 102 377 102 320 c 2
+ 102 0 l 1
+ 26 0 l 1
+ 26 320 l 1
+ 26 500 l 1
+ 102 500 l 1
+ 102 467 l 1
+ 131 488 167 500 206 500 c 0
+ 305 500 386 419 386 320 c 2
+ 386 0 l 1
+ 310 0 l 1
+ 310 320 l 2
+EndSplineSet
+Kerns2: 26 17 "Scrifts kerning pairs" 25 -41 "Scrifts kerning pairs" 24 -10 "Scrifts kerning pairs" 23 -25 "Scrifts kerning pairs" 22 -48 "Scrifts kerning pairs" 21 25 "Scrifts kerning pairs" 20 -35 "Scrifts kerning pairs" 19 26 "Scrifts kerning pairs" 18 27 "Scrifts kerning pairs" 17 19 "Scrifts kerning pairs" 16 27 "Scrifts kerning pairs" 15 19 "Scrifts kerning pairs" 14 27 "Scrifts kerning pairs" 13 27 "Scrifts kerning pairs" 12 27 "Scrifts kerning pairs" 11 27 "Scrifts kerning pairs" 10 -169 "Scrifts kerning pairs" 9 27 "Scrifts kerning pairs" 8 27 "Scrifts kerning pairs" 7 19 "Scrifts kerning pairs" 6 -35 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 8 "Scrifts kerning pairs" 3 19 "Scrifts kerning pairs" 2 27 "Scrifts kerning pairs" 1 19 "Scrifts kerning pairs"
+EndChar
+
+StartChar: o
+Encoding: 111 111 15
+Width: 452
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+227 424 m 0
+ 159 424 103 346 103 250 c 0
+ 103 154 159 76 227 76 c 0
+ 295 76 351 154 351 250 c 0
+ 351 346 295 424 227 424 c 0
+227 500 m 0
+ 337 500 427 388 427 250 c 0
+ 427 112 337 0 227 0 c 0
+ 117 0 27 112 27 250 c 0
+ 27 388 117 500 227 500 c 0
+EndSplineSet
+Kerns2: 26 -63 "Scrifts kerning pairs" 25 -55 "Scrifts kerning pairs" 24 -53 "Scrifts kerning pairs" 23 -37 "Scrifts kerning pairs" 22 -63 "Scrifts kerning pairs" 21 19 "Scrifts kerning pairs" 20 -53 "Scrifts kerning pairs" 19 18 "Scrifts kerning pairs" 18 19 "Scrifts kerning pairs" 17 16 "Scrifts kerning pairs" 16 19 "Scrifts kerning pairs" 15 16 "Scrifts kerning pairs" 14 19 "Scrifts kerning pairs" 13 19 "Scrifts kerning pairs" 12 19 "Scrifts kerning pairs" 11 19 "Scrifts kerning pairs" 10 -191 "Scrifts kerning pairs" 9 19 "Scrifts kerning pairs" 8 19 "Scrifts kerning pairs" 7 16 "Scrifts kerning pairs" 6 -53 "Scrifts kerning pairs" 5 17 "Scrifts kerning pairs" 4 5 "Scrifts kerning pairs" 3 16 "Scrifts kerning pairs" 2 19 "Scrifts kerning pairs" 1 16 "Scrifts kerning pairs"
+EndChar
+
+StartChar: p
+Encoding: 112 112 16
+Width: 451
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+226 500 m 0
+ 336 500 426 388 426 250 c 0
+ 426 112 336 0 226 0 c 0
+ 179 0 136 20 102 54 c 1
+ 102 -210 l 1
+ 26 -210 l 1
+ 26 250 l 1
+ 26 500 l 1
+ 102 500 l 1
+ 102 446 l 1
+ 136 480 179 500 226 500 c 0
+102 250 m 0
+ 102 154 158 76 226 76 c 0
+ 294 76 350 154 350 250 c 0
+ 350 346 294 424 226 424 c 0
+ 158 424 102 346 102 250 c 0
+EndSplineSet
+Kerns2: 26 -63 "Scrifts kerning pairs" 25 -62 "Scrifts kerning pairs" 24 -53 "Scrifts kerning pairs" 23 -37 "Scrifts kerning pairs" 22 -63 "Scrifts kerning pairs" 21 19 "Scrifts kerning pairs" 20 -53 "Scrifts kerning pairs" 19 18 "Scrifts kerning pairs" 18 19 "Scrifts kerning pairs" 17 15 "Scrifts kerning pairs" 16 17 "Scrifts kerning pairs" 15 16 "Scrifts kerning pairs" 14 19 "Scrifts kerning pairs" 13 19 "Scrifts kerning pairs" 12 19 "Scrifts kerning pairs" 11 19 "Scrifts kerning pairs" 10 -211 "Scrifts kerning pairs" 9 19 "Scrifts kerning pairs" 8 19 "Scrifts kerning pairs" 7 15 "Scrifts kerning pairs" 6 -53 "Scrifts kerning pairs" 5 17 "Scrifts kerning pairs" 4 5 "Scrifts kerning pairs" 3 16 "Scrifts kerning pairs" 2 19 "Scrifts kerning pairs" 1 16 "Scrifts kerning pairs"
+EndChar
+
+StartChar: q
+Encoding: 113 113 17
+Width: 451
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+227 424 m 0
+ 159 424 103 346 103 250 c 0
+ 103 154 159 76 227 76 c 0
+ 295 76 351 154 351 250 c 0
+ 351 346 295 424 227 424 c 0
+351 54 m 1
+ 317 20 274 0 227 0 c 0
+ 117 0 27 112 27 250 c 0
+ 27 388 117 500 227 500 c 0
+ 274 500 317 480 351 446 c 1
+ 351 500 l 1
+ 427 500 l 1
+ 427 250 l 1
+ 427 -210 l 1
+ 351 -210 l 1
+ 351 54 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 25 -7 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 19 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 11 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: r
+Encoding: 114 114 18
+Width: 337
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+306 425 m 1
+ 240 387 l 1
+ 223 416 189 430 157 421 c 0
+ 125 412 102 383 102 350 c 2
+ 102 0 l 1
+ 26 0 l 1
+ 26 350 l 1
+ 26 500 l 1
+ 102 500 l 1
+ 102 480 l 1
+ 113 486 124 492 137 495 c 0
+ 203 513 272 484 306 425 c 1
+EndSplineSet
+Kerns2: 1 -82 "Scrifts kerning pairs" 4 -93 "Scrifts kerning pairs" 7 -82 "Scrifts kerning pairs" 15 -82 "Scrifts kerning pairs" 24 -71 "Scrifts kerning pairs" 2 -7 "Scrifts kerning pairs" 6 -12 "Scrifts kerning pairs" 8 -7 "Scrifts kerning pairs" 9 -7 "Scrifts kerning pairs" 11 -7 "Scrifts kerning pairs" 12 -7 "Scrifts kerning pairs" 13 -7 "Scrifts kerning pairs" 14 -7 "Scrifts kerning pairs" 16 -7 "Scrifts kerning pairs" 18 -7 "Scrifts kerning pairs" 19 -5 "Scrifts kerning pairs" 20 -12 "Scrifts kerning pairs" 21 -6 "Scrifts kerning pairs" 22 -48 "Scrifts kerning pairs" 23 -36 "Scrifts kerning pairs" 25 -44 "Scrifts kerning pairs" 26 -48 "Scrifts kerning pairs" 17 -82 "Scrifts kerning pairs" 10 -217 "Scrifts kerning pairs" 5 -81 "Scrifts kerning pairs" 3 -82 "Scrifts kerning pairs"
+EndChar
+
+StartChar: s
+Encoding: 115 115 19
+Width: 370
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+26 0 m 1
+ 26 76 l 1
+ 202 76 l 2
+ 240 76 270 106 270 144 c 1
+ 270 144 l 1
+ 270 182 240 212 202 212 c 2
+ 148 212 l 2
+ 81 212 26 267 26 334 c 2
+ 26 340 l 2
+ 26 428 98 500 186 500 c 2
+ 346 500 l 1
+ 346 424 l 1
+ 170 424 l 2
+ 132 424 102 394 102 356 c 1
+ 102 356 l 1
+ 102 318 132 288 170 288 c 2
+ 183 288 l 2
+ 273 288 346 215 346 125 c 1
+ 346 125 l 1
+ 346 56 290 0 221 0 c 2
+ 26 0 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 27 "Scrifts kerning pairs" 20 13 "Scrifts kerning pairs" 19 28 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 20 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 10 -177 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 13 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: t
+Encoding: 116 116 20
+Width: 276
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+30 424 m 1
+ 30 500 l 1
+ 90 500 l 1
+ 90 630 l 1
+ 166 630 l 1
+ 166 500 l 1
+ 250 500 l 1
+ 250 424 l 1
+ 166 424 l 1
+ 166 0 l 1
+ 90 0 l 1
+ 90 424 l 1
+ 30 424 l 1
+EndSplineSet
+Kerns2: 10 -212 "Scrifts kerning pairs" 26 -19 "Scrifts kerning pairs" 24 -13 "Scrifts kerning pairs" 21 15 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 17 "Scrifts kerning pairs" 18 15 "Scrifts kerning pairs" 17 -70 "Scrifts kerning pairs" 16 14 "Scrifts kerning pairs" 15 -70 "Scrifts kerning pairs" 14 14 "Scrifts kerning pairs" 13 14 "Scrifts kerning pairs" 12 12 "Scrifts kerning pairs" 11 12 "Scrifts kerning pairs" 9 14 "Scrifts kerning pairs" 8 12 "Scrifts kerning pairs" 7 -70 "Scrifts kerning pairs" 6 11 "Scrifts kerning pairs" 5 -70 "Scrifts kerning pairs" 4 -60 "Scrifts kerning pairs" 3 -44 "Scrifts kerning pairs" 2 12 "Scrifts kerning pairs" 1 -70 "Scrifts kerning pairs"
+EndChar
+
+StartChar: u
+Encoding: 117 117 21
+Width: 410
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+310 33 m 1
+ 281 12 245 0 206 0 c 0
+ 107 0 26 81 26 180 c 2
+ 26 500 l 1
+ 102 500 l 1
+ 102 180 l 2
+ 102 123 149 76 206 76 c 0
+ 263 76 310 123 310 180 c 2
+ 310 500 l 1
+ 386 500 l 1
+ 386 180 l 1
+ 386 0 l 1
+ 310 0 l 1
+ 310 33 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 28 "Scrifts kerning pairs" 20 11 "Scrifts kerning pairs" 19 30 "Scrifts kerning pairs" 18 30 "Scrifts kerning pairs" 17 20 "Scrifts kerning pairs" 16 30 "Scrifts kerning pairs" 15 20 "Scrifts kerning pairs" 14 30 "Scrifts kerning pairs" 13 30 "Scrifts kerning pairs" 12 30 "Scrifts kerning pairs" 11 30 "Scrifts kerning pairs" 10 -160 "Scrifts kerning pairs" 9 30 "Scrifts kerning pairs" 8 30 "Scrifts kerning pairs" 7 20 "Scrifts kerning pairs" 6 11 "Scrifts kerning pairs" 5 20 "Scrifts kerning pairs" 4 9 "Scrifts kerning pairs" 3 20 "Scrifts kerning pairs" 2 30 "Scrifts kerning pairs" 1 20 "Scrifts kerning pairs"
+EndChar
+
+StartChar: v
+Encoding: 118 118 22
+Width: 463
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+341 500 m 1
+ 432 500 l 1
+ 278 0 l 1
+ 186 0 l 1
+ 32 500 l 1
+ 123 500 l 1
+ 232 147 l 1
+ 341 500 l 1
+EndSplineSet
+Kerns2: 10 -217 "Scrifts kerning pairs" 26 -45 "Scrifts kerning pairs" 25 -19 "Scrifts kerning pairs" 24 -27 "Scrifts kerning pairs" 23 -16 "Scrifts kerning pairs" 22 -20 "Scrifts kerning pairs" 21 -5 "Scrifts kerning pairs" 20 -9 "Scrifts kerning pairs" 18 -5 "Scrifts kerning pairs" 17 -64 "Scrifts kerning pairs" 16 -5 "Scrifts kerning pairs" 15 -64 "Scrifts kerning pairs" 14 -5 "Scrifts kerning pairs" 13 -5 "Scrifts kerning pairs" 12 -5 "Scrifts kerning pairs" 11 -5 "Scrifts kerning pairs" 9 -5 "Scrifts kerning pairs" 8 -5 "Scrifts kerning pairs" 7 -64 "Scrifts kerning pairs" 6 -9 "Scrifts kerning pairs" 5 -63 "Scrifts kerning pairs" 4 -75 "Scrifts kerning pairs" 3 -49 "Scrifts kerning pairs" 2 -5 "Scrifts kerning pairs" 1 -64 "Scrifts kerning pairs"
+EndChar
+
+StartChar: w
+Encoding: 119 119 23
+Width: 623
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+501 500 m 1
+ 592 500 l 1
+ 498 0 l 1
+ 406 0 l 1
+ 312 338 l 1
+ 218 0 l 1
+ 126 0 l 1
+ 32 500 l 1
+ 123 500 l 1
+ 181 194 l 1
+ 266 500 l 1
+ 358 500 l 1
+ 443 194 l 1
+ 501 500 l 1
+EndSplineSet
+Kerns2: 26 -37 "Scrifts kerning pairs" 25 -15 "Scrifts kerning pairs" 24 -25 "Scrifts kerning pairs" 23 -12 "Scrifts kerning pairs" 22 -16 "Scrifts kerning pairs" 20 -5 "Scrifts kerning pairs" 17 -38 "Scrifts kerning pairs" 15 -38 "Scrifts kerning pairs" 10 -208 "Scrifts kerning pairs" 7 -38 "Scrifts kerning pairs" 6 -5 "Scrifts kerning pairs" 5 -38 "Scrifts kerning pairs" 4 -49 "Scrifts kerning pairs" 3 -31 "Scrifts kerning pairs" 1 -38 "Scrifts kerning pairs"
+EndChar
+
+StartChar: x
+Encoding: 120 120 24
+Width: 443
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+321 500 m 1
+ 412 500 l 1
+ 268 250 l 1
+ 412 0 l 1
+ 321 0 l 1
+ 222 171 l 1
+ 123 0 l 1
+ 32 0 l 1
+ 176 250 l 1
+ 32 500 l 1
+ 123 500 l 1
+ 222 329 l 1
+ 321 500 l 1
+EndSplineSet
+Kerns2: 10 -217 "Scrifts kerning pairs" 26 -10 "Scrifts kerning pairs" 25 -27 "Scrifts kerning pairs" 24 -11 "Scrifts kerning pairs" 23 -25 "Scrifts kerning pairs" 22 -27 "Scrifts kerning pairs" 21 -11 "Scrifts kerning pairs" 20 -19 "Scrifts kerning pairs" 17 -54 "Scrifts kerning pairs" 15 -54 "Scrifts kerning pairs" 7 -54 "Scrifts kerning pairs" 6 -19 "Scrifts kerning pairs" 5 -54 "Scrifts kerning pairs" 4 -65 "Scrifts kerning pairs" 3 -43 "Scrifts kerning pairs" 1 -54 "Scrifts kerning pairs"
+EndChar
+
+StartChar: y
+Encoding: 121 121 25
+Width: 463
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+341 500 m 1
+ 432 500 l 1
+ 257 0 l 1
+ 183 -210 l 1
+ 92 -210 l 1
+ 166 0 l 1
+ 32 500 l 1
+ 123 500 l 1
+ 217 147 l 1
+ 341 500 l 1
+EndSplineSet
+Kerns2: 10 -217 "Scrifts kerning pairs" 26 -46 "Scrifts kerning pairs" 25 -26 "Scrifts kerning pairs" 24 -27 "Scrifts kerning pairs" 23 -17 "Scrifts kerning pairs" 22 -20 "Scrifts kerning pairs" 21 -6 "Scrifts kerning pairs" 20 -10 "Scrifts kerning pairs" 18 -7 "Scrifts kerning pairs" 17 -80 "Scrifts kerning pairs" 16 -12 "Scrifts kerning pairs" 15 -72 "Scrifts kerning pairs" 14 -7 "Scrifts kerning pairs" 13 -7 "Scrifts kerning pairs" 12 -7 "Scrifts kerning pairs" 11 -7 "Scrifts kerning pairs" 9 -7 "Scrifts kerning pairs" 8 -7 "Scrifts kerning pairs" 7 -83 "Scrifts kerning pairs" 6 -10 "Scrifts kerning pairs" 5 -71 "Scrifts kerning pairs" 4 -83 "Scrifts kerning pairs" 3 -54 "Scrifts kerning pairs" 2 -7 "Scrifts kerning pairs" 1 -72 "Scrifts kerning pairs"
+EndChar
+
+StartChar: z
+Encoding: 122 122 26
+Width: 413
+Flags: HW
+LayerCount: 2
+Fore
+SplineSet
+47 424 m 1
+ 47 500 l 1
+ 387 500 l 1
+ 387 424 l 1
+ 118 76 l 1
+ 387 76 l 1
+ 387 0 l 1
+ 27 0 l 1
+ 27 76 l 1
+ 296 424 l 1
+ 47 424 l 1
+EndSplineSet
+Kerns2: 26 19 "Scrifts kerning pairs" 21 17 "Scrifts kerning pairs" 20 13 "Scrifts kerning pairs" 19 24 "Scrifts kerning pairs" 18 23 "Scrifts kerning pairs" 17 -60 "Scrifts kerning pairs" 16 23 "Scrifts kerning pairs" 15 -60 "Scrifts kerning pairs" 14 23 "Scrifts kerning pairs" 13 23 "Scrifts kerning pairs" 12 23 "Scrifts kerning pairs" 11 23 "Scrifts kerning pairs" 10 -209 "Scrifts kerning pairs" 9 23 "Scrifts kerning pairs" 8 23 "Scrifts kerning pairs" 7 -60 "Scrifts kerning pairs" 6 13 "Scrifts kerning pairs" 5 -60 "Scrifts kerning pairs" 4 -71 "Scrifts kerning pairs" 3 -38 "Scrifts kerning pairs" 2 23 "Scrifts kerning pairs" 1 -60 "Scrifts kerning pairs"
+EndChar
+
+StartChar: .notdef
+Encoding: 65536 -1 27
+Width: 500
+VWidth: 0
+Flags: HW
+LayerCount: 2
+EndChar
+EndChars
+EndSplineFont

@@ -1347,7 +1347,7 @@ def test_snapshots_create_compare_restore(client, tmp_path):
 
 
 def test_insert_point_on_existing_path(client, tmp_path):
-    path = client.post("/api/sample", json={"folder": str(tmp_path)}).json()["path"]
+    path = _caps_sample(tmp_path)
     fid = client.post("/api/open", json={"path": path}).json()["fid"]
     e = lambda name, **args: client.post("/api/edit", json={"fid": fid, "name": name, "kind": "insert_point", "args": args})
     # a straight edge: one more point, outline unchanged
@@ -1378,25 +1378,32 @@ def test_sample_font_for_first_run(client, tmp_path):
     path = r.json()["path"]
     info = client.post("/api/open", json={"path": path}).json()
     names = {g["name"] for g in info["glyphs"]}
-    assert {"H", "E", "L", "O", "I", "T", "F", "space"} <= names and info["familyname"] == "Scrifts Sample"
+    assert {"space"} | set("abcdefghijklmnopqrstuvwxyz") <= names and info["familyname"] == "Scrifts Sample"
     fid = info["fid"]
-    o = client.get("/api/glyph/O", params={"fid": fid}).json()
+    o = client.get("/api/glyph/o", params={"fid": fid}).json()
     assert len(o["contours"]) == 2 and [s["cw"] for s in o["shapes"]].count(True) == 1     # an outer shape and a hole
-    assert len(client.get("/api/glyph/H", params={"fid": fid}).json()["contours"]) == 3         # two stems and a bar, all kept
     # a word can be set in it, with real spacing
-    shaped = client.post("/api/shape", json={"fid": fid, "text": "HELLO", "features": {}}).json()
-    assert [g["name"] for g in shaped] == ["H", "E", "L", "L", "O"] and all(g["ax"] > 0 for g in shaped)
+    shaped = client.post("/api/shape", json={"fid": fid, "text": "hello", "features": {}}).json()
+    assert [g["name"] for g in shaped] == ["h", "e", "l", "l", "o"] and all(g["ax"] > 0 for g in shaped)
     # asking again never overwrites what the user may have changed
-    client.post("/api/edit", json={"fid": fid, "name": "I", "kind": "add_contour",
+    client.post("/api/edit", json={"fid": fid, "name": "l", "kind": "add_contour",
                                    "args": {"points": [[0, 0, 1], [0, 10, 1], [10, 10, 1]], "closed": True}})
     client.post("/api/save", json={"fid": fid})
     again = client.post("/api/sample", json={"folder": str(tmp_path / "Scrifts")}).json()
     assert again["created"] is False and again["path"] == path
-    assert len(client.get("/api/glyph/I", params={"fid": fid}).json()["contours"]) == 2
+    assert len(client.get("/api/glyph/l", params={"fid": fid}).json()["contours"]) == 2
+
+
+def _caps_sample(folder):
+    """The old sample font (HELOITF from bars and a ring, spacing 68): the editing tests rely on its exact shapes,
+    so they keep it as a file of their own while the shipped sample changes."""
+    import shutil
+    os.makedirs(folder, exist_ok=True)
+    return shutil.copy(Path(__file__).with_name("sample-caps.sfd"), os.path.join(folder, "Scrifts Sample.sfd"))
 
 
 def _open_sample(client, tmp_path):
-    path = client.post("/api/sample", json={"folder": str(tmp_path / "s")}).json()["path"]
+    path = _caps_sample(tmp_path / "s")
     return client.post("/api/open", json={"path": path}).json()["fid"]
 
 
@@ -1647,7 +1654,7 @@ def test_vertical_and_horizontal_guides_live_side_by_side(client, tmp_path):
 
 def test_autosave_all_saves_only_what_changed_and_looking_changes_nothing(client, tmp_path):
     fid = _open_sample(client, tmp_path)
-    other = client.post("/api/open", json={"path": client.post("/api/sample", json={"folder": str(tmp_path / "t")}).json()["path"]}).json()["fid"]
+    other = client.post("/api/open", json={"path": _caps_sample(tmp_path / "t")}).json()["fid"]
     quiet = client.post("/api/autosave/all", json={"fids": [fid, other]}).json()
     assert quiet["saved"] is False and {r["changed"] for r in quiet["results"].values()} == {False}
     client.get("/api/glyph/H", params={"fid": fid})                                  # reading is not changing

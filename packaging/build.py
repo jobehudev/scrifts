@@ -32,6 +32,7 @@ def main():
         (ROOT / "frontend" / "dist", "frontend/dist"),
         (ROOT / "plugins", "plugins"),
         (FF, "FontForgeBuilds"),
+        (ROOT / "backend" / "Scrifts Sample.sfd", "backend"),  # copied by op_make_sample
     ] + [(p, "backend") for p in (ROOT / "backend").glob("*.py")]
     args = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--windowed",
             "--name", "forge-backend", "--distpath", OUT / "dist", "--workpath", OUT / "build", "--specpath", OUT,
