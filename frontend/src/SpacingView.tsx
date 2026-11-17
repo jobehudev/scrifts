@@ -179,7 +179,7 @@ export function SpacingView({ font, loc, sel, onSelect, guides, reference, famil
   /** turns the master bar's weight preview off */
   onStopPreview?: () => void
 }) {
-  const [text, setText] = useState(() => localStorage.getItem('scrifts.spacing.' + font.familyname) ?? localStorage.getItem('scrifts.spacing') ?? 'HHOHOO nnonoo Hamburgefontsiv /a/b/c')
+  const [text, setText] = useState(() => localStorage.getItem('scrifts.spacing.' + font.familyname) ?? localStorage.getItem('scrifts.spacing') ?? 'welcome to scrifts')  // every letter is in the lowercase sample
   const [size, setSize] = useState(140)
   // proofing: colours, sizes, paragraph, lines. All local to this view, remembered between sessions.
   const stored = <T,>(key: string, init: T) => { try { const v = localStorage.getItem('scrifts.proof.' + key); return v === null ? init : JSON.parse(v) as T } catch { return init } }
