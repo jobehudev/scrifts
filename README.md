@@ -19,7 +19,7 @@ theirs; Scrifts is the interface. See [CREDITS.md](CREDITS.md).
 
 ## Overview Video
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/G8y2M0hS_ZM?si=a1BlIXiK2zMEPK_n" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Scrifts overview video: click to watch on YouTube](https://img.youtube.com/vi/G8y2M0hS_ZM/hqdefault.jpg)](https://youtu.be/G8y2M0hS_ZM)
 
 ## Download
 
