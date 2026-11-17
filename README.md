@@ -17,7 +17,9 @@ Scrifts is built on [FontForge](https://fontforge.org) (its engine is used throu
 [fontTools](https://github.com/fonttools/fonttools) (variable fonts). All font reading, writing and outline work is
 theirs; Scrifts is the interface. See [CREDITS.md](CREDITS.md).
 
-![The glyph editor: one glyph with its points, the Layers panel and the glyph grid](docs/editor.png)
+## Overview Video
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/G8y2M0hS_ZM?si=a1BlIXiK2zMEPK_n" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## Download
 
@@ -31,7 +33,7 @@ then **Run anyway**.
 Want to hack on it instead? Skip to [Running from source](#running-from-source).
 
 ## First steps
-
+![The glyph editor: one glyph with its points, the Layers panel and the glyph grid](docs/editor.png)
 1. Start the app and pick **File > New Font**, or open a font you already have (`.ttf`, `.otf`, `.ufo`, `.glyphs`, `.sfd`).
 2. Click a glyph in the grid to open it in the editor.
 3. Draw with the pen tool, drag points to reshape, and check the result in the weight preview if you have masters.
